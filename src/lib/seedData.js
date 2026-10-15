@@ -13,19 +13,25 @@ const id = (n) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
 const HOUR = 3_600_000;
 const DAY = HOUR * 24;
 const rolesInfo = [
-  ["Admin Pusat", "Administrasi & Pelayanan", "Rani Prameswari"],
-  ["Divisi Sales", "Sambungan Baru", "Bagas Adhi Nugroho"],
-  ["Divisi Verifikasi", "Verifikasi Pelanggan", "Sekar Ayu Larasati"],
-  ["Divisi Teknik", "Distribusi & Pemeliharaan", "Fikri Maulana"],
-  ["Divisi Customer Service", "Layanan Pelanggan", "Intan Permatasari"],
+  ["Admin Aetra", "Manajemen Pusat & Pengaturan", "Rani Prameswari"],
+  ["Customer Service", "Pintu Masuk Pendaftaran & Complain", "Intan Permatasari"],
+  ["SPV Sales", "Supervisor Divisi Sales", "Bagas Adhi Nugroho"],
+  ["SPV Technical", "Supervisor Divisi Teknik", "Fikri Maulana"],
+  ["Sales", "Petugas Survey & Pendaftaran", "Sarah Wijaya"],
+  ["NC (New Connection)", "Tim Instalasi Sambungan Baru", "Joko Susilo"],
+  ["Minor Repair", "Tim Perbaikan & Material", "Dedi Kurniawan"],
+  ["Pelanggan", "Portal Pemohon & Pengadu", "Warga Pengguna"],
 ];
 
 export const DEMO_ACCOUNTS = [
-  { label: "Admin Pusat", email: "admin@aetra.demo", password: "Admin123!", role: "Seluruh modul dan pengaturan" },
-  { label: "Divisi Sales", email: "sales@aetra.demo", password: "Sales123!", role: "Pendaftaran sambungan baru" },
-  { label: "Divisi Verifikasi", email: "verifikasi@aetra.demo", password: "Verifikasi123!", role: "Dokumen dan survei pelanggan" },
-  { label: "Divisi Teknik", email: "teknik@aetra.demo", password: "Teknik123!", role: "Pemasangan dan perbaikan air" },
-  { label: "Layanan Pelanggan", email: "cs@aetra.demo", password: "CS123!", role: "Pengaduan dan pelacakan layanan" },
+  { label: "Admin Aetra", email: "admin@aetra.demo", password: "Admin123!", role: "Akses penuh, kustomisasi form, logo, user & hak akses" },
+  { label: "Customer Service (CS)", email: "cs@aetra.demo", password: "CS123!", role: "Terima pendaftaran & complain, terbit ID & ID Non-Reguler" },
+  { label: "SPV Sales", email: "spv.sales@aetra.demo", password: "SpvSales123!", role: "Menerima tugas dari CS & delegasi ke Sales" },
+  { label: "SPV Technical", email: "spv.technical@aetra.demo", password: "SpvTech123!", role: "Menerima complain dari CS & delegasi ke NC / Minor Repair" },
+  { label: "Sales", email: "sales@aetra.demo", password: "Sales123!", role: "Survey lokasi & form pendaftaran" },
+  { label: "NC (New Connection)", email: "nc@aetra.demo", password: "Nc123!", role: "Cek pipa reguler/non-reguler & pasang meter" },
+  { label: "Minor Repair", email: "repair@aetra.demo", password: "Repair123!", role: "Perbaikan pipa & pelaporan material" },
+  { label: "Pelanggan", email: "pelanggan@aetra.demo", password: "Pelanggan123!", role: "Mengajukan sambungan baru, complain & tracking progres" },
 ];
 
 export function seedAuthUsers() {

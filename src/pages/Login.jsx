@@ -40,16 +40,14 @@ export function LoginPage() {
         </form>
                 {isDemoMode && (
           <div className="mt-6 border-t border-slate-100 pt-4">
-            <p className="mb-2.5 flex items-center gap-1.5 text-[11px] font-medium text-slate-500">
-              <ShieldCheck size={13} className="text-brand-500" />
-              Demo Cepat: Klik peran untuk masuk 1-klik
+            <p className="mb-2 flex items-center justify-between text-[11px] font-semibold text-slate-700">
+              <span className="flex items-center gap-1.5"><ShieldCheck size={13} className="text-brand-500" /> Kredensial & Demo 1-Klik Semua Role</span>
             </p>
-            <div className="grid grid-cols-2 gap-2 mb-2">
+            <p className="mb-2 text-[10px] text-slate-400">Klik salah satu role untuk langsung masuk ke sistem:</p>
+            <div className="max-h-56 space-y-1.5 overflow-y-auto pr-1">
               {DEMO_ACCOUNTS.map((account) => (
-                <button
+                <div
                   key={account.email}
-                  type="button"
-                  disabled={busy}
                   onClick={async () => {
                     setValues({ email: account.email, password: account.password });
                     setBusy(true);
@@ -64,11 +62,18 @@ export function LoginPage() {
                       setBusy(false);
                     }
                   }}
-                  className="flex flex-col items-start rounded-lg border border-slate-200 bg-slate-50 p-2 text-left transition-all hover:border-brand-500 hover:bg-brand-50/40 focus:outline-none cursor-pointer"
+                  className="group flex cursor-pointer items-center justify-between rounded-lg border border-slate-200 bg-slate-50 p-2.5 transition-all hover:border-brand-500 hover:bg-brand-50/60"
                 >
-                  <span className="text-[11px] font-semibold text-slate-800">{account.label}</span>
-                  <span className="text-[9px] text-slate-400 truncate w-full">{account.email}</span>
-                </button>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[11px] font-bold text-slate-800">{account.label}</span>
+                      <span className="rounded bg-brand-100 px-1 py-0.5 text-[9px] font-medium text-brand-700">{account.password}</span>
+                    </div>
+                    <p className="truncate text-[10px] text-slate-500">{account.email}</p>
+                    <p className="truncate text-[9px] text-slate-400">{account.role}</p>
+                  </div>
+                  <span className="ml-2 rounded bg-white px-2 py-1 text-[10px] font-semibold text-brand-600 shadow-xs transition-colors group-hover:bg-brand-600 group-hover:text-white">Masuk</span>
+                </div>
               ))}
             </div>
           </div>
