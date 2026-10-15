@@ -75,7 +75,7 @@
 }
 @keyframes pulse-ring {
   0% {
-    box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-brand-600) 45%, transparent);
+    box-shadow: 0 0 0 0 rgba(0, 119, 189, 0.45);
   }
   70% {
     box-shadow: 0 0 0 10px transparent;

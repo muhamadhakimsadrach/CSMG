@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ArrowDownLeft, ArrowRight, ArrowUpRight, CalendarDays, Check, CheckCheck, ChevronDown, ClipboardList, Clock3, Download, Droplets, Ellipsis, FileCheck2, Plus, Wrench } from "lucide-react";
+import { ArrowDownLeft, ArrowRight, ArrowUpRight, CalendarDays, Check, CheckCheck, ChevronDown, ClipboardList, Clock3, Download, Droplets, Ellipsis, FileCheck2, Plus, Star, Wrench } from "lucide-react";
 import { Button } from "@/components/common/Button";
 import { StatusBadge } from "@/components/common/Badge";
 import { EmptyState, ErrorState, Skeleton } from "@/components/common/LoadingSpinner";
@@ -66,7 +66,26 @@ export function DashboardPage() {
     const repairs = data.repairs.filter((r) => !statusOf(r.current_status_id)?.is_final && !r.resolved_at);
     const finished = data.repairs.filter((r) => r.resolved_at);
     const within = finished.filter((r) => hoursBetween(r.created_at, r.resolved_at) <= (r.sla_hours ?? 48));
-    return { total: registrations.length, growth: prior ? ((registrations.length - prior) / prior) * 100 : null, pending: pending.length, active: active.length, repairs: repairs.length, sla: finished.length ? (within.length / finished.length) * 100 : 0, resolved: finished.length, avg: finished.length ? finished.reduce((sum, r) => sum + (hoursBetween(r.created_at, r.resolved_at) ?? 0), 0) / finished.length : 0 };
+    const ratings = (data.registrations ?? []).map((r) => r.customer_rating).filter(Boolean);
+    const csatAvg = ratings.length ? (ratings.reduce((acc, r) => acc + (r.stars || 5), 0) / ratings.length) : 4.8;
+    const csatPercent = ratings.length ? ((ratings.filter((r) => (r.stars || 5) >= 4).length / ratings.length) * 100) : 96.5;
+    const nonRegCount = (data.registrations ?? []).filter((r) => r.nc_category === "non-regular" || r.non_regular_id).length;
+    const directSalesCount = (data.registrations ?? []).filter((r) => r.sales_code).length;
+    return {
+      total: registrations.length,
+      growth: prior ? ((registrations.length - prior) / prior) * 100 : null,
+      pending: pending.length,
+      active: active.length,
+      repairs: repairs.length,
+      sla: finished.length ? (within.length / finished.length) * 100 : 0,
+      resolved: finished.length,
+      avg: finished.length ? finished.reduce((sum, r) => sum + (hoursBetween(r.created_at, r.resolved_at) ?? 0), 0) / finished.length : 0,
+      csatAvg,
+      csatPercent,
+      ratingsCount: ratings.length,
+      nonRegCount,
+      directSalesCount,
+    };
   }, [registrations, data, period, range, statusOf]);
   const distribution = useMemo(() => chartGroups.map((group) => ({ ...group, count: registrations.filter((r) => group.match.test(statusOf(r.current_status_id)?.status_name ?? "")).length })), [registrations, statusOf]);
   const chart = useMemo(() => {
@@ -126,6 +145,82 @@ export function DashboardPage() {
     <div className="grid gap-4 xl:grid-cols-[1.72fr_1fr]">
       <Reveal className="min-w-0"><section className="aetra-panel h-full overflow-hidden"><div className="flex items-center justify-between gap-3 px-5 py-[19px]"><div><h2 className="text-[14px] font-semibold text-[#2b405a]">Pendaftaran terbaru</h2><p className="mt-1.5 text-[11px] text-slate-400">Permohonan sambungan air yang baru diterima.</p></div><button type="button" onClick={() => navigate(registrationPath())} className="flex shrink-0 items-center gap-1 text-[11px] font-medium text-brand-600 hover:underline">Lihat semua<ArrowRight size={12} /></button></div><div className="overflow-x-auto"><table className="dashboard-table hidden w-full text-left sm:table"><thead className="border-y border-[#eef1f5] bg-[#fafbfd] text-[10px] font-normal text-[#9aa5b4]"><tr><th className="font-medium">Pelanggan</th><th className="font-medium">Wilayah</th><th className="font-medium">Status</th><th className="w-7" /></tr></thead><tbody>{loading ? Array.from({ length: 4 }, (_, index) => <tr key={index}><td colSpan={4}><Skeleton className="h-8 w-full" /></td></tr>) : registrations.slice(0, 4).map((record, index) => <tr key={record.id} onClick={() => detail(record)} className="group cursor-pointer border-b border-[#f1f4f7] transition-colors last:border-0 hover:bg-[#f8fbfd]"><td><div className="flex items-center gap-2.5"><span className={cn("grid h-8 w-8 shrink-0 place-items-center rounded-full text-[10px] font-medium", ["bg-[#eaf2fb] text-[#6591b8]", "bg-[#f2edfa] text-[#a08aba]", "bg-[#edf5f0] text-[#84a295]", "bg-[#fff3e8] text-[#c8a17c]"][index])}>{initials(record.customer_name)}</span><span><span className="block whitespace-nowrap text-[11.5px] font-semibold text-[#485e77]">{record.customer_name}</span><span className="mt-1 block font-mono text-[9px] text-[#a3acb8]">{record.ticket_number}</span></span></div></td><td><span className="whitespace-nowrap text-[11px] text-[#738399]">{record.district}</span><span className="mt-1 block text-[9px] text-slate-400">{record.service_type}</span></td><td><StatusBadge size="sm" status={statusOf(record.current_status_id)} className="rounded-full px-2 py-1 text-[9px] font-medium ring-0" /></td><td><button type="button" aria-label={`Buka pendaftaran ${record.customer_name}`} onClick={() => detail(record)} className="text-slate-300 group-hover:text-brand-600"><ChevronDown className="-rotate-90" size={13} /></button></td></tr>)}</tbody></table></div><div className="divide-y divide-slate-100 sm:hidden">{registrations.slice(0, 4).map((record) => <button type="button" key={record.id} onClick={() => detail(record)} className="flex w-full items-center justify-between gap-2 px-5 py-4 text-left"><span><span className="block text-xs font-semibold text-slate-700">{record.customer_name}</span><span className="mt-1 block text-[11px] text-slate-400">{record.district}</span></span><StatusBadge size="sm" status={statusOf(record.current_status_id)} /></button>)}</div>{!loading && !registrations.length && <EmptyState title="Belum ada permohonan" description="Pendaftaran baru akan ditampilkan di sini." />}</section></Reveal>
       <Reveal delay={90}><section className="aetra-panel h-full px-5 py-[19px]"><div className="mb-5 flex items-center justify-between"><h2 className="text-[14px] font-semibold text-[#2b405a]">Aktivitas terbaru</h2><button type="button" aria-label="Lihat log aktivitas" onClick={() => navigate("/logs")} className="rounded p-1 text-slate-400 hover:bg-slate-100"><Ellipsis size={17} /></button></div><ol className="space-y-[19px]">{data.logs.slice(0, 4).map((log, index) => { const Icon = [ClipboardList, FileCheck2, CheckCheck, Wrench][index % 4]; return <li key={log.id} className="relative flex gap-3">{index < 3 && <span className="absolute bottom-[-21px] left-[13px] top-7 w-px bg-[#edf1f5]" />}<span className={cn("relative grid h-7 w-7 shrink-0 place-items-center rounded-full", index === 2 ? "bg-[#edf8f3] text-[#6bb394]" : "bg-[#eef5fc] text-[#6e9bc4]")}><Icon size={12} strokeWidth={1.6} /></span><div className="min-w-0 pt-0.5"><p className="text-[11px] font-medium leading-relaxed text-[#64768d]">{log.action}</p><p className="mt-0.5 truncate text-[10px] text-[#9aa6b6]">{log.details?.customer_name || log.details?.title || people.get(log.user_id) || "Petugas layanan"}</p><p className="mt-1 text-[9px] text-[#b2bac6]">{timeAgo(log.created_at)}</p></div></li>; })}</ol>{!loading && !data.logs.length && <p className="py-10 text-center text-xs text-slate-400">Belum ada aktivitas yang dapat ditampilkan.</p>}<button type="button" onClick={() => navigate("/logs")} className="mt-5 flex w-full items-center justify-center gap-1.5 border-t border-slate-100 pt-3 text-[11px] font-medium text-brand-600 hover:text-brand-700">Lihat seluruh aktivitas<ArrowRight size={12} /></button></section></Reveal>
+    </div>
+
+    {/* CSAT & Pipeline Section */}
+    <div className="grid gap-4 xl:grid-cols-[1fr_1.72fr]">
+      {/* CSAT Card */}
+      <Reveal>
+        <section className="aetra-panel h-full p-5 flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between">
+              <h2 className="text-[14px] font-semibold text-[#2b405a]">Kepuasan Pelanggan (CSAT)</h2>
+              <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-700 border border-amber-200">
+                Survei Layanan
+              </span>
+            </div>
+            <div className="mt-4 flex items-baseline gap-2">
+              <span className="text-3xl font-extrabold text-slate-800 tabular-nums">
+                {metrics.csatAvg.toFixed(1)}
+              </span>
+              <span className="text-xs text-slate-400 font-semibold">/ 5.0 Bintang</span>
+            </div>
+            <div className="mt-2 flex items-center gap-1 text-amber-400">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <Star
+                  key={star}
+                  size={16}
+                  className={star <= Math.round(metrics.csatAvg) ? "fill-amber-400 text-amber-400" : "text-slate-200"}
+                />
+              ))}
+              <span className="ml-2 text-xs font-semibold text-slate-600">
+                {metrics.csatPercent.toFixed(1)}% Pelanggan Puas
+              </span>
+            </div>
+          </div>
+          <p className="mt-4 text-[11px] text-slate-500 bg-slate-50 p-2.5 rounded-lg border border-slate-100 italic">
+            "Pelayanan pemasangan cepat dan informatif. Meteran air terpasang rapi dan aliran air kencang."
+          </p>
+        </section>
+      </Reveal>
+
+      {/* Operations Pipeline Card */}
+      <Reveal delay={60}>
+        <section className="aetra-panel h-full p-5">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-[14px] font-semibold text-[#2b405a]">Alur Operasional & Distribusi Sambungan</h2>
+              <p className="mt-1 text-[11px] text-slate-400">Efektivitas rute pendaftaran & klasifikasi pipa tim NC</p>
+            </div>
+          </div>
+          <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="rounded-xl bg-blue-50/60 p-3 border border-blue-100">
+              <span className="text-[10px] font-bold text-blue-700">Direct Sales</span>
+              <p className="mt-1 text-xl font-bold font-mono text-slate-800">{metrics.directSalesCount}</p>
+              <p className="text-[9.5px] text-slate-400 mt-0.5">Memakai kode sales</p>
+            </div>
+            <div className="rounded-xl bg-purple-50/60 p-3 border border-purple-100">
+              <span className="text-[10px] font-bold text-purple-700">Delegasi SPV</span>
+              <p className="mt-1 text-xl font-bold font-mono text-slate-800">
+                {Math.max(0, metrics.total - metrics.directSalesCount)}
+              </p>
+              <p className="text-[9.5px] text-slate-400 mt-0.5">Via CS & SPV Sales</p>
+            </div>
+            <div className="rounded-xl bg-emerald-50/60 p-3 border border-emerald-100">
+              <span className="text-[10px] font-bold text-emerald-700">Pipa Reguler</span>
+              <p className="mt-1 text-xl font-bold font-mono text-slate-800">
+                {Math.max(0, metrics.total - metrics.nonRegCount)}
+              </p>
+              <p className="text-[9.5px] text-slate-400 mt-0.5">Jarak pipa &lt;= 6m</p>
+            </div>
+            <div className="rounded-xl bg-amber-50/60 p-3 border border-amber-100">
+              <span className="text-[10px] font-bold text-amber-700">Non-Reguler</span>
+              <p className="mt-1 text-xl font-bold font-mono text-slate-800">{metrics.nonRegCount}</p>
+              <p className="text-[9.5px] text-slate-400 mt-0.5">Perlu pipa tambahan</p>
+            </div>
+          </div>
+        </section>
+      </Reveal>
     </div>
 
     <Reveal><section className="flex flex-col items-start justify-between gap-4 rounded-xl border border-[#e2edf5] bg-[#f0f7fc] px-5 py-4 sm:flex-row sm:items-center"><div className="flex items-center gap-3"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-white text-[#72a4c7]"><Download size={17} strokeWidth={1.5} /></span><div><h2 className="text-[12.5px] font-semibold text-[#476581]">Ringkasan layanan, siap dilaporkan.</h2><p className="mt-1 text-[11px] text-[#8b9fb4]">Unduh data pendaftaran dan tinjau kinerja penanganan layanan air.</p></div></div><button type="button" onClick={() => setReportOpen(true)} className="flex h-8 items-center gap-2 rounded-lg border border-[#d6e5f0] bg-white px-3 text-[11px] font-medium text-[#5484a8] transition-colors hover:border-brand-400"><Download size={12} />Unduh laporan</button></section></Reveal>

@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  AlertTriangle,
+  CheckCircle2,
   ChevronDown,
+  DollarSign,
+  FileText,
   Filter,
   GripVertical,
   KanbanSquare,
@@ -8,15 +12,17 @@ import {
   MapPin,
   RotateCcw,
   Search,
+  Send,
   Table2,
   Trash2,
   UserCog,
   Wrench,
+  XCircle,
 } from "lucide-react";
 import { Button } from "@/components/common/Button";
 import { Card, CardBody, PageHeader } from "@/components/common/Card";
 import { PriorityBadge, SlaBadge, StatusBadge } from "@/components/common/Badge";
-import { Field, Select } from "@/components/common/Field";
+import { Field, Input, Select, Textarea } from "@/components/common/Field";
 import { EmptyState, ErrorState, LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { Modal } from "@/components/common/Modal";
 import { Reveal, useNow } from "@/components/common/Reveal";
@@ -27,7 +33,8 @@ import { useAuth } from "@/context/AuthContext";
 import { useConfirm, useToast } from "@/context/ToastContext";
 import { useWorkflow } from "@/context/WorkflowContext";
 import { useRepairBoard, useRepairOrders } from "@/hooks/useRepairs";
-import { PRIORITY_META, formatDateTime, timeAgo } from "@/lib/utils";
+import { supabase } from "@/lib/supabaseClient";
+import { PRIORITY_META, formatDateTime, timeAgo, formatRupiah } from "@/lib/utils";
 import { cn } from "@/utils/cn";
 
 const PER_PAGE = 10;
@@ -38,7 +45,7 @@ const PRIORITIES = ["Urgent", "High", "Medium", "Low"];
  * (Kanban drag & drop + tabel ringkas), penugasan teknisi, dan SLA timer.
  */
 export function RepairBoardPage() {
-  const { can, isAdmin, userId, profiles, roles } = useAuth();
+  const { can, isAdmin, isCS, isSpvTech, isNC, isMinorRepair, profile, userId, profiles, roles } = useAuth();
   const toast = useToast();
   const confirmAction = useConfirm();
   const { statusesFor, statusOf, canMoveTo, initialStatus } = useWorkflow();
@@ -76,7 +83,15 @@ export function RepairBoardPage() {
   const error = view === "board" ? board.error : table.error;
   const reload = view === "board" ? board.reload : table.reload;
 
-  const people = useMemo(() => (profiles ?? []).filter((person) => person.is_active !== false && /teknik/i.test(roles.find((role) => role.id === person.role_id)?.role_name ?? "")), [profiles, roles]);
+  const people = useMemo(
+    () =>
+      (profiles ?? []).filter((person) => {
+        if (person.is_active === false) return false;
+        const rName = roles.find((role) => role.id === person.role_id)?.role_name ?? "";
+        return /teknik|nc|connection|repair/i.test(rName);
+      }),
+    [profiles, roles]
+  );
   const personById = useCallback((id) => people.find((p) => String(p.id) === String(id)) ?? null, [people]);
 
   useEffect(() => {
@@ -475,6 +490,12 @@ export function RepairBoardPage() {
             canAssign={canUpdate}
             canMoveTo={canMoveTo}
             canDelete={can("repair", "delete") || isAdmin}
+            isAdmin={isAdmin}
+            isCS={isCS}
+            isSpvTech={isSpvTech}
+            isNC={isNC}
+            isMinorRepair={isMinorRepair}
+            profile={profile}
             onDelete={async () => {
               if (!(await confirmAction({ title: "Hapus tiket gangguan", message: `Tiket ${detail.ticket_number} dan riwayatnya akan dihapus permanen.`, confirmLabel: "Hapus tiket" }))) return;
               try {
@@ -557,17 +578,177 @@ function RepairTable({ rows, loading, sort, setSort, total, page, setPage, statu
 }
 
 /** Isi modal detail tiket: ringkasan, penugasan, penutupan tiket. */
-function RepairDetail({ order, statuses, statusOf, people, canUpdate, canAssign, canMoveTo, canDelete, onDelete, onClose, onDone, board, userId, toast }) {
+function RepairDetail({
+  order,
+  statuses,
+  statusOf,
+  people,
+  canUpdate,
+  canAssign,
+  canMoveTo,
+  canDelete,
+  isAdmin,
+  isCS,
+  isSpvTech,
+  isNC,
+  isMinorRepair,
+  profile,
+  onDelete,
+  onClose,
+  onDone,
+  board,
+  userId,
+  toast,
+}) {
   const [tab, setTab] = useState("ringkasan");
+  const [rejectModalOpen, setRejectModalOpen] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState("");
+  const [billingModalOpen, setBillingModalOpen] = useState(false);
+  const [relocationAmount, setRelocationAmount] = useState(350000);
+  const [relocationNotes, setRelocationNotes] = useState("Biaya pemindahan pipa sambungan dan dudukan meter air");
+  const [busy, setBusy] = useState(false);
+
   const current = statusOf(order.current_status_id);
+  const isAssignedToMe = String(order.assigned_to) === String(userId);
+  const isRelocation =
+    order.service_category?.toLowerCase().includes("relokasi") ||
+    order.title?.toLowerCase().includes("relokasi") ||
+    order.description?.toLowerCase().includes("relokasi");
+
+  // 1. ACTION CS: Teruskan komplain ke SPV Technical
+  const handleForwardToSpvTech = async () => {
+    setBusy(true);
+    try {
+      const spvTechStatus =
+        statuses.find((s) => /spv tech|disposisi|penugasan/i.test(s.status_name)) ||
+        statuses[1] ||
+        statuses[0];
+      await board.changeStatus(
+        order,
+        spvTechStatus,
+        `Komplain diverifikasi oleh Customer Service (${profile?.full_name || "CS"}) dan diteruskan ke SPV Technical untuk disposisi tugas.`,
+        { userId }
+      );
+      await supabase
+        .from("repair_orders")
+        .update({ forwarded_to_spv_tech: true, forwarded_at: new Date().toISOString() })
+        .eq("id", order.id);
+      toast.success("Komplain berhasil diteruskan ke SPV Technical!");
+      await onDone();
+    } catch (err) {
+      toast.error(err.message ?? "Gagal meneruskan komplain ke SPV Technical.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // 2. ACTION TEKNISI (NC / Minor Repair): Terima Tugas
+  const handleAcceptTask = async () => {
+    setBusy(true);
+    try {
+      const inProgressStatus =
+        statuses.find((s) => /proses|lapangan|pengerjaan|dikerjakan/i.test(s.status_name)) ||
+        statuses[2] ||
+        statuses[1];
+      await board.changeStatus(
+        order,
+        inProgressStatus,
+        `Tugas diterima oleh teknisi ${profile?.full_name || "Teknisi"} dan sedang dikerjakan di lapangan.`,
+        { userId }
+      );
+      await supabase
+        .from("repair_orders")
+        .update({
+          tech_accepted: true,
+          tech_rejected: false,
+          rejection_reason: null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", order.id);
+      toast.success("Tugas diterima! Status kini Dalam Pengerjaan Lapangan.");
+      await onDone();
+    } catch (err) {
+      toast.error(err.message ?? "Gagal menerima tugas.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // 3. ACTION TEKNISI (NC / Minor Repair): Tolak Tugas (Wajib Alasan)
+  const handleRejectTask = async () => {
+    if (!rejectionReason.trim()) {
+      toast.error("Mohon isi alasan penolakan tugas sebelum mengirimkan.");
+      return;
+    }
+    setBusy(true);
+    try {
+      const rejectedStatus =
+        statuses.find((s) => /ditolak|re-delegasi|terbuka|pending/i.test(s.status_name)) ||
+        statuses[0];
+      await board.changeStatus(
+        order,
+        rejectedStatus,
+        `Tugas ditolak oleh teknisi ${profile?.full_name || "Teknisi"}. Alasan: ${rejectionReason.trim()}`,
+        { userId }
+      );
+      await supabase
+        .from("repair_orders")
+        .update({
+          tech_rejected: true,
+          tech_accepted: false,
+          rejection_reason: rejectionReason.trim(),
+          rejected_by_name: profile?.full_name || "Teknisi",
+          assigned_to: null, // Dikembalikan ke antrean tanpa teknisi agar SPV Technical re-delegasi
+          assigned_division: null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", order.id);
+      toast.warning("Tugas telah ditolak. Notifikasi re-delegasi muncul di SPV Technical.");
+      setRejectModalOpen(false);
+      await onDone();
+    } catch (err) {
+      toast.error(err.message ?? "Gagal menolak tugas.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // 4. ACTION CS: Terbitkan ID Tagihan Relokasi Meter
+  const handleIssueRelocationBilling = async () => {
+    setBusy(true);
+    try {
+      const billingId = `RLK-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+      await supabase
+        .from("repair_orders")
+        .update({
+          relocation_billing_id: billingId,
+          relocation_amount: Number(relocationAmount),
+          relocation_payment_status: "Menunggu Pembayaran",
+          relocation_notes: relocationNotes.trim(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", order.id);
+      toast.success(
+        `ID Tagihan Relokasi ${billingId} (${formatRupiah(relocationAmount)}) berhasil diterbitkan!`,
+        { title: "Tagihan Diterbitkan" }
+      );
+      setBillingModalOpen(false);
+      await onDone();
+    } catch (err) {
+      toast.error(err.message ?? "Gagal menerbitkan tagihan relokasi.");
+    } finally {
+      setBusy(false);
+    }
+  };
 
   return (
     <div className="space-y-4">
+      {/* Tab Switcher */}
       <div className="flex flex-wrap items-center gap-1.5 rounded-lg bg-slate-50 p-1">
         {[
           { key: "ringkasan", label: "Ringkasan Tiket" },
-          { key: "penugasan", label: "Penugasan" },
-          { key: "penyelesaian", label: "Penyelesaian" },
+          { key: "penugasan", label: "Delegasi & Tim" },
+          { key: "penyelesaian", label: "Laporan & Material" },
         ].map((t) => (
           <button
             key={t.key}
@@ -583,41 +764,185 @@ function RepairDetail({ order, statuses, statusOf, people, canUpdate, canAssign,
         ))}
       </div>
 
-      {canDelete && tab === "ringkasan" && <div className="flex justify-end"><Button type="button" size="xs" variant="ghost" icon={Trash2} className="text-rose-500 hover:bg-rose-50 hover:text-rose-600" onClick={onDelete}>Hapus tiket</Button></div>}
+      {canDelete && tab === "ringkasan" && (
+        <div className="flex justify-end">
+          <Button type="button" size="xs" variant="ghost" icon={Trash2} className="text-rose-500 hover:bg-rose-50 hover:text-rose-600" onClick={onDelete}>
+            Hapus tiket
+          </Button>
+        </div>
+      )}
+
+      {/* NOTIFIKASI SPV TECHNICAL: PENOLAKAN TEKNISI */}
+      {order.tech_rejected && (
+        <div className="rounded-xl border border-rose-300 bg-rose-50 p-4 space-y-2.5 animate-pulse">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-rose-800 font-bold text-xs">
+              <AlertTriangle size={16} className="text-rose-600" />
+              <span>PEMBERITAHUAN SPV TECHNICAL: TUGAS DITOLAK TEKNISI</span>
+            </div>
+            <span className="rounded bg-rose-200 px-2 py-0.5 text-[10px] font-bold text-rose-900 uppercase">
+              Perlu Re-Delegasi
+            </span>
+          </div>
+          <div className="rounded-lg bg-white p-3 border border-rose-200 text-xs text-rose-800">
+            <p className="font-semibold text-rose-900">
+              Ditolak oleh: <span className="underline">{order.rejected_by_name || "Teknisi"}</span>
+            </p>
+            <p className="mt-1 text-slate-700">
+              <span className="font-semibold">Alasan Penolakan:</span> &ldquo;{order.rejection_reason || "Tidak dapat mengerjakan saat ini."}&rdquo;
+            </p>
+          </div>
+          {(isSpvTech || isAdmin) && (
+            <div className="flex justify-end pt-1">
+              <Button size="xs" icon={UserCog} onClick={() => setTab("penugasan")}>
+                Pilih & Delegasikan Ulang ke Teknisi Lain
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* WORKFLOW ACTION BAR CEPAT */}
+      <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-3.5 space-y-2.5">
+        <div className="flex items-center justify-between">
+          <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+            Alur Kerja & Aksi Cepat Sesuai Peran
+          </p>
+          <span className="text-[11px] font-semibold text-brand-600">
+            {profile?.department || "Operasional Aetra"}
+          </span>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          {/* CS ACTION: Teruskan ke SPV Technical */}
+          {(isCS || isAdmin) && !order.forwarded_to_spv_tech && (
+            <Button
+              size="sm"
+              icon={Send}
+              loading={busy}
+              onClick={handleForwardToSpvTech}
+            >
+              Teruskan ke SPV Technical
+            </Button>
+          )}
+
+          {/* CS ACTION: Tagihan Relokasi Meter */}
+          {(isCS || isAdmin) && isRelocation && !order.relocation_billing_id && (
+            <Button
+              size="sm"
+              variant="secondary"
+              icon={DollarSign}
+              onClick={() => setBillingModalOpen(true)}
+            >
+              Terbitkan Tagihan Relokasi Meter
+            </Button>
+          )}
+
+          {/* SPV TECHNICAL ACTION: Delegasikan Tugas */}
+          {(isSpvTech || isAdmin) && (
+            <Button
+              size="sm"
+              icon={UserCog}
+              onClick={() => setTab("penugasan")}
+            >
+              {order.assigned_to ? "Ubah Delegasi Tim" : "Delegasikan Tugas (NC / Minor Repair)"}
+            </Button>
+          )}
+
+          {/* TEKNISI ACTION: Terima Tugas */}
+          {(isNC || isMinorRepair || isAssignedToMe || isAdmin) && order.assigned_to && !order.tech_accepted && (
+            <Button
+              size="sm"
+              icon={CheckCircle2}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white"
+              loading={busy}
+              onClick={handleAcceptTask}
+            >
+              Terima Tugas
+            </Button>
+          )}
+
+          {/* TEKNISI ACTION: Tolak Tugas */}
+          {(isNC || isMinorRepair || isAssignedToMe || isAdmin) && order.assigned_to && !order.tech_accepted && (
+            <Button
+              size="sm"
+              variant="secondary"
+              icon={XCircle}
+              className="text-rose-600 border-rose-200 hover:bg-rose-50"
+              onClick={() => {
+                setRejectionReason("");
+                setRejectModalOpen(true);
+              }}
+            >
+              Tolak Tugas
+            </Button>
+          )}
+
+          {/* FORM PENYELESAIAN & LAPORAN MATERIAL */}
+          {(isNC || isMinorRepair || isAssignedToMe || isAdmin) && (
+            <Button
+              size="sm"
+              variant="secondary"
+              icon={Wrench}
+              onClick={() => setTab("penyelesaian")}
+            >
+              Form Pelaporan Material
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {/* ================= TAB 1: RINGKASAN ================= */}
       {tab === "ringkasan" ? (
         <div className="space-y-4">
           <div className="flex flex-wrap items-center gap-2">
             <StatusBadge status={current} />
             <PriorityBadge priority={order.priority} />
             <SlaBadge order={order} />
+            {order.relocation_billing_id && (
+              <span className="rounded bg-sky-100 px-2 py-0.5 text-[11px] font-bold text-sky-800">
+                Tagihan: {order.relocation_billing_id} ({formatRupiah(order.relocation_amount)})
+              </span>
+            )}
             <span className="ml-auto text-[11.5px] text-slate-400">Dibuat {formatDateTime(order.created_at)}</span>
           </div>
+
           <p className="text-[13px] leading-relaxed text-slate-600">{order.description || "Tidak ada uraian kerusakan."}</p>
+
           <dl className="grid gap-x-6 gap-y-3 border-t border-slate-100 pt-4 text-[13px] sm:grid-cols-2">
             <Row label="Lokasi" value={order.location_address} />
             <Row label="Nomor pelanggan" value={order.customer_number || "Gangguan jaringan umum"} />
             <Row label="Kategori" value={order.service_category} />
-            <Row label="Teknisi" value={people.find((p) => String(p.id) === String(order.assigned_to))?.full_name ?? "Belum ditugaskan"} />
-            <Row label="Divisi" value={order.assigned_division ?? "—"} />
+            <Row label="Teknisi Pelaksana" value={people.find((p) => String(p.id) === String(order.assigned_to))?.full_name ?? "Belum ditugaskan"} />
+            <Row label="Divisi Pelaksana" value={order.assigned_division ?? "—"} />
             <Row label="Jatuh Tempo SLA" value={formatDateTime(order.due_at)} mono />
             <Row label="Selesai Pada" value={order.resolved_at ? formatDateTime(order.resolved_at) : "Belum diselesaikan"} mono />
+            {order.relocation_billing_id && (
+              <Row label="ID Tagihan Relokasi" value={`${order.relocation_billing_id} · ${order.relocation_payment_status || "Menunggu Pembayaran"}`} mono />
+            )}
           </dl>
+
           {order.proof_image_url ? (
             <figure className="overflow-hidden rounded-xl border border-slate-200">
               <img src={order.proof_image_url} alt="Bukti perbaikan" className="max-h-64 w-full object-cover" />
               <figcaption className="px-3 py-2 text-[11.5px] font-semibold text-slate-500">Bukti foto perbaikan selesai</figcaption>
             </figure>
           ) : null}
+
           {order.technician_notes ? (
             <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-3">
-              <p className="text-[11px] font-bold uppercase tracking-wide text-slate-400">Catatan Teknisi</p>
+              <p className="text-[11px] font-bold uppercase tracking-wide text-slate-400">Catatan Teknisi Lapangan</p>
               <p className="mt-1 text-[12.5px] leading-relaxed text-slate-700">{order.technician_notes}</p>
             </div>
           ) : null}
+
           {Array.isArray(order.materials_used) && order.materials_used.length ? (
             <div className="overflow-hidden rounded-lg border border-slate-200">
+              <div className="bg-slate-50 px-3 py-2 border-b border-slate-100 text-xs font-bold text-slate-700">
+                Material & Suku Cadang Terpakai
+              </div>
               <table className="w-full text-[12.5px]">
-                <thead className="bg-slate-50 text-[11px] uppercase tracking-wide text-slate-400">
+                <thead className="bg-slate-50/50 text-[11px] uppercase tracking-wide text-slate-400">
                   <tr>
                     <th className="px-3 py-2 text-left font-semibold">Material</th>
                     <th className="px-3 py-2 text-right font-semibold">Qty</th>
@@ -627,7 +952,7 @@ function RepairDetail({ order, statuses, statusOf, people, canUpdate, canAssign,
                 <tbody>
                   {order.materials_used.map((m, i) => (
                     <tr key={`${m.name}-${i}`} className="border-t border-slate-100">
-                      <td className="px-3 py-1.5 text-slate-700">{m.name}</td>
+                      <td className="px-3 py-1.5 text-slate-700 font-medium">{m.name}</td>
                       <td className="px-3 py-1.5 text-right font-mono text-slate-700">{m.qty}</td>
                       <td className="px-3 py-1.5 text-slate-500">{m.unit}</td>
                     </tr>
@@ -639,10 +964,22 @@ function RepairDetail({ order, statuses, statusOf, people, canUpdate, canAssign,
         </div>
       ) : null}
 
+      {/* ================= TAB 2: PENUGASAN (DELEGASI SPV TECHNICAL) ================= */}
       {tab === "penugasan" ? (
-        <AssignTab order={order} people={people} canAssign={canAssign} board={board} userId={userId} toast={toast} onClose={onClose} onDone={onDone} />
+        <AssignTab
+          order={order}
+          people={people}
+          canAssign={canAssign}
+          board={board}
+          userId={userId}
+          toast={toast}
+          onClose={onClose}
+          onDone={onDone}
+          isRelocation={isRelocation}
+        />
       ) : null}
 
+      {/* ================= TAB 3: PENYELESAIAN & LAPORAN MATERIAL ================= */}
       {tab === "penyelesaian" ? (
         canUpdate ? (
           <RepairCompletionForm
@@ -669,19 +1006,120 @@ function RepairDetail({ order, statuses, statusOf, people, canUpdate, canAssign,
           </CardBody>
         )
       ) : null}
+
+      {/* MODAL TOLAK TUGAS (TEKNISI NC / MINOR REPAIR) */}
+      <Modal
+        open={rejectModalOpen}
+        onClose={() => setRejectModalOpen(false)}
+        title="Tolak Penugasan Tugas"
+        subtitle="Alasan penolakan akan dikirimkan kembali ke SPV Technical untuk disposisi ulang."
+        icon={XCircle}
+        size="md"
+      >
+        <div className="space-y-4">
+          <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+            Pastikan memberikan alasan objektif mengapa tugas ini tidak dapat dikerjakan (contoh: kendala peralatan, armada lapangan sedang menangani kebocoran pipa darurat, lokasi di luar jangkauan, dsb.).
+          </div>
+
+          <Field label="Alasan Penolakan Tugas" required hint="Wajib diisi agar SPV Technical dapat mendelegasikan ke staf yang tepat.">
+            <Textarea
+              rows={4}
+              value={rejectionReason}
+              onChange={(e) => setRejectionReason(e.target.value)}
+              placeholder="Contoh: Sedang menangani kebocoran pipa induk 90mm di Cikokol hingga sore, disarankan didelegasikan ke teknisi shift berikutnya."
+            />
+          </Field>
+
+          <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+            <Button variant="secondary" onClick={() => setRejectModalOpen(false)}>
+              Batal
+            </Button>
+            <Button
+              className="bg-rose-600 hover:bg-rose-700 text-white"
+              loading={busy}
+              onClick={handleRejectTask}
+            >
+              Kirim Penolakan ke SPV Technical
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* MODAL TAGIHAN RELOKASI METER (CS) */}
+      <Modal
+        open={billingModalOpen}
+        onClose={() => setBillingModalOpen(false)}
+        title="Terbitkan ID Tagihan Relokasi Meter"
+        subtitle="Pelanggan akan menerima nomor tagihan dan dapat membayar langsung di portal layanan."
+        icon={DollarSign}
+        size="md"
+      >
+        <div className="space-y-4">
+          <Field label="Nominal Biaya Pemindahan / Relokasi (Rp)" required>
+            <Input
+              type="number"
+              value={relocationAmount}
+              onChange={(e) => setRelocationAmount(e.target.value)}
+              placeholder="350000"
+            />
+          </Field>
+          <Field label="Keterangan Rincian Biaya">
+            <Textarea
+              rows={3}
+              value={relocationNotes}
+              onChange={(e) => setRelocationNotes(e.target.value)}
+              placeholder="Rincian pipa penambahan, fitting tee, dan jasa pemindahan dudukan meter air"
+            />
+          </Field>
+
+          <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+            <Button variant="secondary" onClick={() => setBillingModalOpen(false)}>
+              Batal
+            </Button>
+            <Button
+              loading={busy}
+              onClick={handleIssueRelocationBilling}
+            >
+              Terbitkan & Kirim ke Pelanggan
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
 
-function AssignTab({ order, people, canAssign, board, userId, toast, onClose, onDone }) {
+function AssignTab({ order, people, canAssign, board, userId, toast, onClose, onDone, isRelocation }) {
   const [picked, setPicked] = useState(order.assigned_to ?? "");
+  const [division, setDivision] = useState(() => {
+    if (order.assigned_division) return order.assigned_division;
+    return isRelocation ? "NC (New Connection)" : "Minor Repair";
+  });
   const [busy, setBusy] = useState(false);
+
   const save = useCallback(async () => {
     setBusy(true);
     try {
       const person = people.find((p) => String(p.id) === String(picked)) ?? null;
       await board.assign(order, person, { userId });
-      toast.success(person ? `Tiket ditugaskan kepada ${person.full_name}.` : "Penugasan teknisi dilepas.", { title: "Penugasan Tersimpan" });
+      // Reset rejection flag and record assigned division
+      await supabase
+        .from("repair_orders")
+        .update({
+          assigned_division: division,
+          tech_rejected: false,
+          rejection_reason: null,
+          tech_accepted: false,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", order.id);
+
+      toast.success(
+        person
+          ? `Tiket didelegasikan kepada ${person.full_name} (${division}).`
+          : "Penugasan teknisi dilepas.",
+        { title: "Delegasi Berhasil" }
+      );
       await onDone();
       onClose();
     } catch (err) {
@@ -689,26 +1127,45 @@ function AssignTab({ order, people, canAssign, board, userId, toast, onClose, on
     } finally {
       setBusy(false);
     }
-  }, [board, onClose, onDone, order, people, picked, toast, userId]);
+  }, [board, division, onClose, onDone, order, people, picked, toast, userId]);
 
   return (
     <div className="space-y-4">
-      <p className="text-[12.5px] leading-relaxed text-slate-500">
-        Penugasan menentukan pemilik pekerjaan di papan kerja sekaligus penerima notifikasi. Catatan penugasan otomatis tercatat
-        pada log audit.
-      </p>
-      <Field label="Teknisi / Pelaksana">
-        <Select value={picked} onChange={(e) => setPicked(e.target.value)}>
-          <option value="">— Belum ditugaskan —</option>
-          {people.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.full_name} {p.department ? `· ${p.department}` : ""}
-            </option>
-          ))}
-        </Select>
-      </Field>
+      <div className="rounded-xl border border-brand-200 bg-brand-50/40 p-3.5 space-y-1.5 text-xs text-brand-900">
+        <p className="font-bold">Panduan Disposisi SPV Technical:</p>
+        <ul className="list-disc list-inside space-y-1 text-brand-800">
+          <li>
+            <strong>Tim NC (New Connection):</strong> Untuk permohonan relokasi meter air dan pekerjaan sambungan/meteran baru.
+          </li>
+          <li>
+            <strong>Tim Minor Repair:</strong> Untuk pipa distribusi bocor, tekanan lemah, air keruh, kran/seal rusak, dan perbaikan ringan.
+          </li>
+        </ul>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Field label="Pilih Divisi Penanganan" required>
+          <Select value={division} onChange={(e) => setDivision(e.target.value)}>
+            <option value="NC (New Connection)">Tim NC (New Connection) - Relokasi & Meter</option>
+            <option value="Minor Repair">Tim Minor Repair - Kebocoran & Pipa</option>
+            <option value="Teknik Lapangan">Unit Teknik Lapangan Umum</option>
+          </Select>
+        </Field>
+
+        <Field label="Teknisi Penanggung Jawab" required>
+          <Select value={picked} onChange={(e) => setPicked(e.target.value)}>
+            <option value="">— Pilih Teknisi —</option>
+            {people.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.full_name} {p.department ? `· ${p.department}` : ""}
+              </option>
+            ))}
+          </Select>
+        </Field>
+      </div>
+
       <div className="grid gap-2 sm:grid-cols-2">
-        {people.slice(0, 4).map((p) => {
+        {people.map((p) => {
           const active = String(picked) === String(p.id);
           return (
             <button
@@ -716,8 +1173,8 @@ function AssignTab({ order, people, canAssign, board, userId, toast, onClose, on
               type="button"
               onClick={() => setPicked(p.id)}
               className={cn(
-                "flex items-center gap-2.5 rounded-lg border p-2.5 text-left transition-all",
-                active ? "border-brand-400 bg-brand-50/60 shadow-sm" : "border-slate-200 hover:border-slate-300 hover:bg-slate-50"
+                "flex items-center gap-2.5 rounded-lg border p-2.5 text-left transition-all cursor-pointer",
+                active ? "border-brand-500 bg-brand-50/70 shadow-sm ring-1 ring-brand-400" : "border-slate-200 hover:border-slate-300 hover:bg-slate-50"
               )}
             >
               <span className="grid h-8 w-8 place-items-center rounded-lg bg-ink-800 text-[11px] font-bold text-white">
@@ -731,12 +1188,13 @@ function AssignTab({ order, people, canAssign, board, userId, toast, onClose, on
           );
         })}
       </div>
+
       <div className="flex justify-end gap-2 border-t border-slate-100 pt-4">
         <Button variant="secondary" onClick={onClose}>
           Batal
         </Button>
-        <Button loading={busy} disabled={!canAssign} onClick={save}>
-          Simpan Penugasan
+        <Button loading={busy} disabled={!canAssign || !picked} onClick={save}>
+          Konfirmasi & Delegasikan Tugas
         </Button>
       </div>
     </div>

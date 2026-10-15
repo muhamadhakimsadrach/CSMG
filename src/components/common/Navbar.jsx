@@ -76,8 +76,31 @@ export function Navbar({ onOpenMobile, title }) {
             <button type="button" aria-label="Buka navigasi" onClick={onOpenMobile} className="rounded-md p-1.5 text-slate-500 lg:hidden"><Menu size={20} /></button>
             <div className="flex items-center gap-2.5 truncate text-[13px]"><span className="hidden text-slate-400 sm:inline">Portal Layanan</span><ChevronRight size={13} className="hidden text-slate-300 sm:inline" /><span className="truncate font-medium text-[#465871]">{title}</span></div>
           </div>
-          <div ref={regionRef} className="relative flex h-full items-center gap-2 sm:gap-5">
-            <button type="button" onClick={() => setSearchOpen(true)} aria-label="Cari pendaftaran atau tiket" className="flex h-9 items-center gap-2 rounded-lg px-1 text-slate-400 transition-colors hover:bg-slate-50 sm:w-52 sm:px-3"><Search size={16} strokeWidth={1.7} /><span className="hidden flex-1 text-left text-[12.5px] sm:inline">Cari di sini...</span><kbd className="hidden rounded border border-slate-200 px-1 text-[10px] text-slate-400 sm:inline">Ctrl K</kbd></button>
+          <div ref={regionRef} className="relative flex h-full items-center gap-2 sm:gap-4">
+            {/* Quick Role Switcher for Admin & Demo */}
+            <div className="hidden sm:flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50/80 px-2.5 py-1 text-xs">
+              <span className="text-[10px] font-bold text-brand-700 uppercase tracking-wide">Tinjau Role:</span>
+              <select
+                aria-label="Tinjau tampilan peran pengguna"
+                value={profile?.email || ""}
+                onChange={async (e) => {
+                  const acc = DEMO_ACCOUNTS.find((a) => a.email === e.target.value);
+                  if (acc) {
+                    await signIn({ email: acc.email, password: acc.password });
+                    navigate("/dashboard");
+                  }
+                }}
+                className="bg-transparent text-xs font-bold text-slate-800 outline-none cursor-pointer"
+              >
+                {DEMO_ACCOUNTS.map((acc) => (
+                  <option key={acc.email} value={acc.email}>
+                    {acc.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <button type="button" onClick={() => setSearchOpen(true)} aria-label="Cari pendaftaran atau tiket" className="flex h-9 items-center gap-2 rounded-lg px-1 text-slate-400 transition-colors hover:bg-slate-50 sm:w-44 sm:px-3"><Search size={16} strokeWidth={1.7} /><span className="hidden flex-1 text-left text-[12.5px] sm:inline">Cari...</span><kbd className="hidden rounded border border-slate-200 px-1 text-[10px] text-slate-400 sm:inline">Ctrl K</kbd></button>
             <button type="button" aria-label="Bantuan layanan" onClick={() => setHelpOpen(true)} className="hidden p-1 text-slate-400 transition-colors hover:text-brand-600 sm:block"><CircleHelp size={18} strokeWidth={1.65} /></button>
             <button type="button" aria-label="Aktivitas terbaru" aria-expanded={popover === "notifications"} onClick={() => setPopover(popover === "notifications" ? null : "notifications")} className="relative p-1 text-slate-400 transition-colors hover:text-brand-600"><Bell size={18} strokeWidth={1.65} /><span className="absolute right-1 top-0.5 h-1.5 w-1.5 rounded-full bg-[#ef967b] ring-2 ring-white" /></button>
             <span className="h-7 w-px bg-slate-100" />

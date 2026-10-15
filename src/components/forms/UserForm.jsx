@@ -26,6 +26,7 @@ export function UserForm({ editingUser = null, roles = [], permissions = [], onC
     department: "",
     role_id: "",
     password: "",
+    sales_code: "",
     is_active: true,
   });
   const [matrix, setMatrix] = useState(emptyMatrix);
@@ -42,7 +43,7 @@ export function UserForm({ editingUser = null, roles = [], permissions = [], onC
 
   useEffect(() => {
     if (!editingUser) {
-      setValues({ full_name: "", email: "", phone_number: "", department: "", role_id: roles[1]?.id ?? roles[0]?.id ?? "", password: "", is_active: true });
+      setValues({ full_name: "", email: "", phone_number: "", department: "", role_id: roles[1]?.id ?? roles[0]?.id ?? "", password: "", sales_code: "", is_active: true });
       setMatrix(emptyMatrix());
       return;
     }
@@ -52,6 +53,7 @@ export function UserForm({ editingUser = null, roles = [], permissions = [], onC
       phone_number: editingUser.phone_number ?? "",
       department: editingUser.department ?? "",
       role_id: editingUser.role_id ?? "",
+      sales_code: editingUser.sales_code ?? "",
       password: "",
       is_active: editingUser.is_active !== false,
     });
@@ -133,6 +135,16 @@ export function UserForm({ editingUser = null, roles = [], permissions = [], onC
             ))}
           </Select>
         </Field>
+        {/sales/i.test(selectedRole?.role_name || "") && (
+          <Field label="Kode Akun / Referral Sales" hint="Kode unik untuk routing berkas langsung dari pendaftaran pelanggan">
+            <Input
+              value={values.sales_code}
+              onChange={(e) => set("sales_code", e.target.value.toUpperCase())}
+              placeholder="Contoh: SLS-SARAH atau SLS-002"
+              className="font-mono font-bold uppercase text-brand-700"
+            />
+          </Field>
+        )}
         {!editingUser ? (
           <Field label="Kata Sandi Awal" required error={errors.password}>
             <div className="relative">
@@ -141,6 +153,14 @@ export function UserForm({ editingUser = null, roles = [], permissions = [], onC
             </div>
           </Field>
         ) : (
+          <Field label="Reset Kata Sandi Baru" hint="Kosongkan jika tidak ingin mengubah password akun">
+            <div className="relative">
+              <KeyRound className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" aria-hidden />
+              <Input type="password" value={values.password} onChange={(e) => set("password", e.target.value)} placeholder="Isi untuk ganti sandi" className="pl-9" />
+            </div>
+          </Field>
+        )}
+        {editingUser && (
           <div className="flex items-end pb-1">
             <Toggle checked={values.is_active} onChange={(v) => set("is_active", v)} label={values.is_active ? "Akun aktif" : "Akun dinonaktifkan"} />
           </div>

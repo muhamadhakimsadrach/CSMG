@@ -70,6 +70,11 @@ export function formatDuration(hours, { long = false } = {}) {
   return parts.length ? parts.join(" ") : "0 menit";
 }
 
+export function formatRupiah(amount) {
+  if (amount === null || amount === undefined || Number.isNaN(Number(amount))) return "Rp 0";
+  return `Rp ${Number(amount).toLocaleString("id-ID")}`;
+}
+
 export function hoursBetween(from, to) {
   if (!from) return null;
   const a = new Date(from).getTime();

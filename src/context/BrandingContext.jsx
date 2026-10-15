@@ -24,6 +24,9 @@ const DEFAULT_SETTINGS = {
   accent_color: COMPANY.accent,
   support_email: "",
   support_phone: COMPANY.contactPhone,
+  login_title: "Portal Layanan Terpadu",
+  login_subtitle: "Akses staf internal, pendaftaran mandiri sambungan baru, pelacakan tagihan & pembayaran, atau komplain pelanggan.",
+  login_badge: "Layanan Air Terpadu PT Aetra",
 };
 
 /**
@@ -108,6 +111,9 @@ export function BrandingProvider({ children }) {
           accent_color: form.accent_color,
           support_email: (form.support_email ?? "").trim(),
           support_phone: (form.support_phone ?? "").trim(),
+          login_title: (form.login_title ?? "").trim() || "Portal Layanan Terpadu",
+          login_subtitle: (form.login_subtitle ?? "").trim() || "Akses staf internal, pendaftaran mandiri sambungan baru, pelacakan tagihan & pembayaran, atau komplain pelanggan.",
+          login_badge: (form.login_badge ?? "").trim() || "Layanan Air Terpadu PT Aetra",
           updated_by: userId,
           updated_at: nowIso(),
         };

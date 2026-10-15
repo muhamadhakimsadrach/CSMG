@@ -1,4 +1,4 @@
-import { Activity, ArrowUpRight, ChevronLeft, ClipboardList, Droplets, Headphones, LayoutDashboard, LogOut, Settings, UsersRound, Workflow, Wrench, X } from "lucide-react";
+import { Activity, ArrowUpRight, ChevronLeft, ClipboardList, Droplets, FileSpreadsheet, Headphones, LayoutDashboard, LogOut, Settings, UsersRound, Workflow, Wrench, X } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useBranding } from "@/context/BrandingContext";
 import { COMPANY } from "@/lib/waterDomain";
@@ -9,6 +9,7 @@ export const NAV_ITEMS = [
   { to: "/dashboard", label: "Dasbor", icon: LayoutDashboard, group: "MENU UTAMA", module: null },
   { to: "/registrations", label: "Pendaftaran air", icon: ClipboardList, group: "MENU UTAMA", module: "pendaftaran" },
   { to: "/repairs", label: "Gangguan & perbaikan", icon: Wrench, group: "MENU UTAMA", module: "repair" },
+  { to: "/forms", label: "Manajemen Form", icon: FileSpreadsheet, group: "ADMINISTRASI", module: "pengaturan" },
   { to: "/users", label: "Pengguna & akses", icon: UsersRound, group: "ADMINISTRASI", module: "pengguna" },
   { to: "/workflow", label: "Alur layanan", icon: Workflow, group: "ADMINISTRASI", module: "workflow" },
   { to: "/logs", label: "Log aktivitas", icon: Activity, group: "ADMINISTRASI", module: "log_aktivitas" },

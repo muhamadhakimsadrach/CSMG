@@ -3,6 +3,7 @@ import { COMPANY, REPAIR_CATEGORIES, SERVICE_DISTRICTS, SERVICE_TYPES } from "./
 export const MODULES = [
   { key: "pendaftaran", label: "Pendaftaran Sambungan Air", short: "Pendaftaran" },
   { key: "repair", label: "Gangguan & Perbaikan Air", short: "Perbaikan" },
+  { key: "forms", label: "Manajemen Form Kustom", short: "Formulir" },
   { key: "pengguna", label: "Manajemen Pengguna", short: "Pengguna" },
   { key: "workflow", label: "Alur Layanan Air", short: "Alur Kerja" },
   { key: "pengaturan", label: "Pengaturan Aplikasi", short: "Pengaturan" },
@@ -47,17 +48,45 @@ export function seedRows() {
   const at = (offset) => new Date(now + offset).toISOString();
   const roles = rolesInfo.map((role, index) => ({ id: id(index + 1), role_name: role[0], description: role[1], created_at: at(-180 * DAY) }));
   const profiles = rolesInfo.map((role, index) => ({
-    id: id(1001 + index), email: DEMO_ACCOUNTS[index].email, full_name: role[2], role_id: roles[index].id,
-    department: role[1], avatar_url: null, phone_number: `08120000${1001 + index}`, is_active: true,
-    created_at: at(-180 * DAY), updated_at: at(-DAY),
+    id: id(1001 + index),
+    email: DEMO_ACCOUNTS[index].email,
+    full_name: role[2],
+    role_id: roles[index].id,
+    department: role[1],
+    avatar_url: null,
+    phone_number: `08120000${1001 + index}`,
+    sales_code: index === 4 ? "SLS-SARAH" : null,
+    is_active: true,
+    created_at: at(-180 * DAY),
+    updated_at: at(-DAY),
   }));
   let seq = 900;
   const permission = (role, module, c, r, u, d = false) => ({ id: id(seq++), role_id: id(role), module_name: module, can_create: c, can_read: r, can_update: u, can_delete: d });
   const permissions = [
-    permission(2, "pendaftaran", true, true, true), permission(2, "repair", true, true, false), permission(2, "log_aktivitas", false, true, false),
-    permission(3, "pendaftaran", false, true, true), permission(3, "log_aktivitas", false, true, false),
-    permission(4, "repair", true, true, true), permission(4, "pendaftaran", false, true, true), permission(4, "log_aktivitas", false, true, false),
-    permission(5, "pendaftaran", true, true, false), permission(5, "repair", true, true, true), permission(5, "log_aktivitas", false, true, false),
+    // CS
+    permission(2, "pendaftaran", true, true, true),
+    permission(2, "repair", true, true, true),
+    permission(2, "log_aktivitas", false, true, false),
+    // SPV Sales
+    permission(3, "pendaftaran", true, true, true),
+    permission(3, "log_aktivitas", false, true, false),
+    // SPV Technical
+    permission(4, "repair", true, true, true),
+    permission(4, "pendaftaran", false, true, true),
+    permission(4, "log_aktivitas", false, true, false),
+    // Sales
+    permission(5, "pendaftaran", true, true, true),
+    permission(5, "log_aktivitas", false, true, false),
+    // NC (New Connection)
+    permission(6, "pendaftaran", false, true, true),
+    permission(6, "repair", false, true, true),
+    permission(6, "log_aktivitas", false, true, false),
+    // Minor Repair
+    permission(7, "repair", true, true, true),
+    permission(7, "log_aktivitas", false, true, false),
+    // Pelanggan
+    permission(8, "pendaftaran", true, true, false),
+    permission(8, "repair", true, true, false),
   ];
   const app_settings = [{
     id: id(2001), app_name: COMPANY.appName, tagline: COMPANY.tagline, logo_url: null, favicon_url: null,
@@ -68,20 +97,20 @@ export function seedRows() {
     allowed_role_ids: allowed.map(id), is_initial: initial, is_final: final, created_at: at(-100 * DAY),
   });
   const registrationStatuses = [
-    status(10, "REGISTRATION", 1, "Pendaftaran diterima", "#E5A63E", [2, 5], true),
-    status(11, "REGISTRATION", 2, "Verifikasi dokumen", "#7E8CE0", [3]),
-    status(12, "REGISTRATION", 3, "Survei jaringan", "#39A2DB", [3, 4]),
-    status(13, "REGISTRATION", 4, "Menunggu pembayaran", "#E3AA5B", [3, 5]),
-    status(16, "REGISTRATION", 5, "Pemasangan meter", "#13A6A4", [4]),
-    status(14, "REGISTRATION", 6, "Sambungan aktif", "#21A685", [4, 5], false, true),
-    status(15, "REGISTRATION", 7, "Tidak dapat dilayani", "#E6767A", [3], false, true),
+    status(10, "REGISTRATION", 1, "Pendaftaran diterima", "#E5A63E", [1, 2, 8], true),
+    status(11, "REGISTRATION", 2, "Diteruskan ke SPV Sales", "#7E8CE0", [1, 2, 3]),
+    status(12, "REGISTRATION", 3, "Survei jaringan", "#39A2DB", [1, 3, 5]),
+    status(13, "REGISTRATION", 4, "Menunggu pembayaran", "#E3AA5B", [1, 2, 8]),
+    status(16, "REGISTRATION", 5, "Pemasangan meter", "#13A6A4", [1, 2, 6]),
+    status(14, "REGISTRATION", 6, "Sambungan aktif", "#21A685", [1, 2, 6], false, true),
+    status(15, "REGISTRATION", 7, "Tidak dapat dilayani", "#E6767A", [1, 2, 3], false, true),
   ];
   const repairStatuses = [
-    status(20, "REPAIR", 1, "Laporan masuk", "#E5A63E", [2, 5], true),
-    status(21, "REPAIR", 2, "Penugasan teknisi", "#7E8CE0", [4]),
-    status(22, "REPAIR", 3, "Dalam perbaikan", "#39A2DB", [4]),
-    status(23, "REPAIR", 4, "Verifikasi aliran air", "#13A6A4", [4, 5]),
-    status(24, "REPAIR", 5, "Selesai", "#21A685", [4, 5], false, true),
+    status(20, "REPAIR", 1, "Laporan masuk", "#E5A63E", [1, 2, 8], true),
+    status(21, "REPAIR", 2, "Penugasan teknisi", "#7E8CE0", [1, 4]),
+    status(22, "REPAIR", 3, "Dalam perbaikan", "#39A2DB", [1, 4, 7]),
+    status(23, "REPAIR", 4, "Verifikasi aliran air", "#13A6A4", [1, 4, 7]),
+    status(24, "REPAIR", 5, "Selesai", "#21A685", [1, 4, 7], false, true),
   ];
   const workflow_statuses = [...registrationStatuses, ...repairStatuses];
   const customerNames = ["Budi Santoso", "Siti Aminah", "Ahmad Fauzi", "PT Sumber Makmur Abadi", "Dewi Lestari", "Hendra Wijaya", "Nur Aisyah", "Rizky Pratama", "Agus Setiawan", "Wulan Puspitasari", "CV Berkah Sejahtera", "Dimas Saputra", "Rina Marlina", "Muhammad Iqbal", "Sri Wahyuni", "Yayasan Harapan Kita"];

@@ -23,6 +23,8 @@ const TABLES = [
   "repair_orders",
   "status_history",
   "activity_logs",
+  "custom_forms",
+  "customer_ratings",
 ];
 const TIMESTAMPS = ["registrations", "repair_orders", "profiles", "app_settings"];
 const UNIQUE_TICKET = ["registrations", "repair_orders"];

@@ -159,7 +159,11 @@ export function AuthProvider({ children }) {
   }, [loadDirectory]);
 
   const isAdmin = useMemo(
-    () => profile?.is_active !== false && String(profile?.role_name ?? roles.find((r) => r.id === profile?.role_id)?.role_name ?? "") === "Admin Pusat",
+    () => {
+      if (!profile || profile.is_active === false) return false;
+      const rName = String(profile?.role_name ?? roles.find((r) => r.id === profile?.role_id)?.role_name ?? "");
+      return /admin/i.test(rName);
+    },
     [profile, roles]
   );
 
@@ -173,6 +177,15 @@ export function AuthProvider({ children }) {
       if (isAdmin) return true;
       return myPerms.some((p) => p.module_name === module && Boolean(p[`can_${action}`]));
     };
+    const roleStr = String(activeRole?.role_name || profile?.role_name || "").toLowerCase();
+    const isCS = /customer service|cs/i.test(roleStr);
+    const isSpvSales = /spv sales/i.test(roleStr);
+    const isSpvTech = /spv tech/i.test(roleStr);
+    const isSales = /sales/i.test(roleStr) && !isSpvSales;
+    const isNC = /nc|new connection/i.test(roleStr);
+    const isMinorRepair = /minor repair|repair/i.test(roleStr) && !isSpvTech;
+    const isCustomer = /pelanggan/i.test(roleStr);
+
     return {
       session,
       user,
@@ -185,6 +198,13 @@ export function AuthProvider({ children }) {
       activeRole,
       roleName: activeRole?.role_name ?? (isAdmin ? "Admin Pusat" : "Belum memiliki peran"),
       isAdmin,
+      isCS,
+      isSpvSales,
+      isSpvTech,
+      isSales,
+      isNC,
+      isMinorRepair,
+      isCustomer,
       isDemoMode,
       booting,
       actionError,

@@ -58,6 +58,9 @@ export function SettingsForm() {
     () =>
       form.app_name !== settings.app_name ||
       form.tagline !== settings.tagline ||
+      form.login_title !== settings.login_title ||
+      form.login_subtitle !== settings.login_subtitle ||
+      form.login_badge !== settings.login_badge ||
       form.accent_color !== settings.accent_color ||
       form.support_email !== settings.support_email ||
       form.support_phone !== settings.support_phone ||
@@ -96,9 +99,25 @@ export function SettingsForm() {
             <Field label="Nama Aplikasi" required error={errors.app_name} className="sm:col-span-2">
               <Input value={form.app_name ?? ""} onChange={(e) => set("app_name", e.target.value)} placeholder="Aetra Tangerang" error={errors.app_name} />
             </Field>
-            <Field label="Tagline" className="sm:col-span-2" hint="Muncul di bawah judul pada layar masuk dan kartu ringkas.">
+            <Field label="Tagline Aplikasi" className="sm:col-span-2" hint="Muncul di bawah judul pada layar masuk dan kartu ringkas.">
               <Textarea rows={2} value={form.tagline ?? ""} onChange={(e) => set("tagline", e.target.value)} placeholder="Portal Layanan Pelanggan" />
             </Field>
+
+            <div className="sm:col-span-2 rounded-xl border border-brand-200 bg-brand-50/40 p-4 space-y-3">
+              <p className="text-xs font-bold text-brand-900 uppercase tracking-wide">Kustomisasi Tulisan Laman Depan / Login</p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Field label="Badge / Label Atas Login" className="sm:col-span-2" hint="Tulisan kecil di atas judul utama login">
+                  <Input value={form.login_badge ?? ""} onChange={(e) => set("login_badge", e.target.value)} placeholder="Layanan Air Terpadu PT Aetra" />
+                </Field>
+                <Field label="Judul Utama Laman Login" className="sm:col-span-2" hint="Teks judul besar yang menyambut pengguna">
+                  <Input value={form.login_title ?? ""} onChange={(e) => set("login_title", e.target.value)} placeholder="Portal Layanan Terpadu" />
+                </Field>
+                <Field label="Deskripsi / Paragraf Laman Login" className="sm:col-span-2" hint="Penjelasan fungsi portal di bawah judul">
+                  <Textarea rows={2} value={form.login_subtitle ?? ""} onChange={(e) => set("login_subtitle", e.target.value)} placeholder="Akses staf internal, pendaftaran mandiri sambungan baru, pelacakan tagihan & pembayaran, atau komplain pelanggan." />
+                </Field>
+              </div>
+            </div>
+
             <Field label="Email Layanan">
               <Input type="email" value={form.support_email ?? ""} onChange={(e) => set("support_email", e.target.value)} placeholder="Email layanan perusahaan (opsional)" error={errors.support_email} />
             </Field>

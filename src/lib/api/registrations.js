@@ -121,6 +121,39 @@ export async function createRegistration(values, { userId, initialStatusId, onPr
     ticketNumber = buildTicketNumber("REG", (existing ?? []).map((r) => r.ticket_number));
   }
 
+  const hasSalesCode = Boolean(values.sales_code?.trim());
+  let targetStatusId = initialStatusId;
+  let statusNote = "Berkas pendaftaran diterima melalui portal layanan.";
+  let assignedSalesId = null;
+  let assignedSalesName = null;
+
+  if (hasSalesCode) {
+    const cleanCode = values.sales_code.trim().toUpperCase();
+    const { data: salesUser } = await supabase
+      .from("profiles")
+      .select("id, full_name, sales_code")
+      .ilike("sales_code", cleanCode)
+      .maybeSingle();
+    if (salesUser) {
+      assignedSalesId = salesUser.id;
+      assignedSalesName = salesUser.full_name;
+    } else {
+      assignedSalesId = "00000000-0000-4000-8000-000000001005";
+      assignedSalesName = "Sarah Wijaya (Sales)";
+    }
+
+    const { data: surveyStatus } = await supabase
+      .from("workflow_statuses")
+      .select("id")
+      .eq("workflow_type", "REGISTRATION")
+      .ilike("status_name", "%survei%")
+      .maybeSingle();
+    if (surveyStatus?.id) {
+      targetStatusId = surveyStatus.id;
+      statusNote = `Pendaftaran langsung direct ke ${assignedSalesName} dengan kode referral ${cleanCode}.`;
+    }
+  }
+
   const payload = {
     ticket_number: ticketNumber,
     customer_name: values.customer_name.trim(),
@@ -141,7 +174,10 @@ export async function createRegistration(values, { userId, initialStatusId, onPr
     latitude: values.latitude === "" || values.latitude == null ? null : Number(values.latitude),
     longitude: values.longitude === "" || values.longitude == null ? null : Number(values.longitude),
     attachment_urls: attachments,
-    current_status_id: initialStatusId ?? null,
+    sales_code: hasSalesCode ? values.sales_code.trim().toUpperCase() : null,
+    assigned_sales_id: assignedSalesId,
+    assigned_sales_name: assignedSalesName,
+    current_status_id: targetStatusId ?? null,
     created_by: userId ?? null,
     created_at: nowIso(),
   };
@@ -150,13 +186,13 @@ export async function createRegistration(values, { userId, initialStatusId, onPr
   const { data, error } = await supabase.from("registrations").insert(payload).select().single();
   if (error) throw new Error(parseError(error, "Gagal menyimpan pendaftaran."));
 
-  if (initialStatusId) {
+  if (targetStatusId) {
     await supabase.from("status_history").insert({
       entity_type: "registration",
       entity_id: data.id,
       from_status_id: null,
-      to_status_id: initialStatusId,
-      note: "Berkas pendaftaran diterima melalui portal pelanggan.",
+      to_status_id: targetStatusId,
+      note: statusNote,
       changed_by: userId ?? null,
       created_at: nowIso(),
     });

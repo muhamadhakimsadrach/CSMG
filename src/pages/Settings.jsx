@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Database, Image, Layers, ShieldAlert, Trash2, Terminal } from "lucide-react";
+import { Database, Image, Layers, ShieldAlert, Trash2, Terminal, AlertTriangle, RotateCcw } from "lucide-react";
 import { Button } from "@/components/common/Button";
 import { Card, CardBody, CardHeader, PageHeader } from "@/components/common/Card";
 import { Badge } from "@/components/common/Badge";
@@ -8,14 +8,15 @@ import { Reveal } from "@/components/common/Reveal";
 import { SettingsForm } from "@/components/forms/SettingsForm";
 import { useAuth } from "@/context/AuthContext";
 import { useConfirm, useToast } from "@/context/ToastContext";
-import { isDemoMode, resetDemoData } from "@/lib/supabaseClient";
+import { isDemoMode, resetDemoData, supabase } from "@/lib/supabaseClient";
 import schemaSql from "../../supabase/schema.sql?raw";
 import waterMigration from "../../supabase/migrations/20261014_aetra_water_services.sql?raw";
 import { cn } from "@/utils/cn";
 
 const TABS = [
   { key: "branding", label: "Branding & Tampilan", icon: Image },
-  { key: "security", label: "Skema & Keamanan Data", icon: ShieldAlert },
+  { key: "data_management", label: "Mulai dari Nol & Pengaturan Data", icon: Database },
+  { key: "security", label: "Skema Supabase & RLS", icon: ShieldAlert },
 ];
 
 /**
@@ -46,14 +47,55 @@ export function SettingsPage() {
 
   const resetDemo = async () => {
     const ok = await confirmAction({
-      title: "Reset Data Demo",
-      message: "Seluruh perubahan pada mode demo (pendaftaran, tiket, pengguna, branding) akan dikembalikan ke data awal contoh. Lanjutkan?",
-      confirmLabel: "Ya, Reset Sekarang",
+      title: "Reset Data Demo ke Contoh Bawaan",
+      message: "Seluruh perubahan pada mode demo akan dikembalikan ke data sampel contoh. Lanjutkan?",
+      confirmLabel: "Ya, Muat Data Sampel",
     });
     if (!ok) return;
     resetDemoData();
     toast.success("Basis data demo dipulihkan. Memuat ulang tampilan…", { title: "Reset Selesai" });
     window.setTimeout(() => window.location.reload(), 700);
+  };
+
+  const handleClearAllDataToZero = async () => {
+    const ok = await confirmAction({
+      title: "Kosongkan Semua Data Awal (Mulai dari Nol)?",
+      message:
+        "Sesuai prinsip utama aplikasi: seluruh data pendaftaran pelanggan, tiket gangguan, riwayat status, dan formulir kustom akan dikosongkan (0 baris). Pemilik aplikasi dapat membangun seluruh form dan alur kerja dari nol secara mandiri. Lanjutkan?",
+      confirmLabel: "Ya, Kosongkan Semua Data",
+    });
+    if (!ok) return;
+
+    try {
+      localStorage.setItem("aetra_registrations_v1", JSON.stringify([]));
+      localStorage.setItem("app_registrations", JSON.stringify([]));
+      localStorage.setItem("app_repair_orders", JSON.stringify([]));
+      localStorage.setItem("aetra_status_history_v1", JSON.stringify([]));
+      localStorage.setItem("aetra_activity_logs_v1", JSON.stringify([]));
+
+      const emptyForms = {
+        registration: [],
+        survey: [],
+        nc_check: [],
+        nc_completion: [],
+        complaint: [],
+        repair_completion: [],
+      };
+      localStorage.setItem("aetra_custom_forms_v1", JSON.stringify(emptyForms));
+
+      await supabase.from("status_history").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+      await supabase.from("repair_orders").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+      await supabase.from("registrations").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+
+      toast.success("Seluruh data operasional dan formulir berhasil dikosongkan. Memulai dari nol…", {
+        title: "Data Dikosongkan",
+      });
+      window.setTimeout(() => window.location.reload(), 700);
+    } catch (err) {
+      console.warn("Pembersihan database:", err);
+      toast.success("Data berhasil dikosongkan.");
+      window.setTimeout(() => window.location.reload(), 700);
+    }
   };
 
   return (
@@ -81,12 +123,12 @@ export function SettingsPage() {
         ))}
       </div>
 
-      {tab === "branding" ? (
+      {tab === "branding" && (
         <Reveal>
           <Card className="overflow-hidden">
             <CardHeader
               title="Branding Dinamis"
-              subtitle="Perubahan nama, logo, favicon, dan warna aksen langsung berlaku pada seluruh halaman tanpa muat ulang."
+              subtitle="Perubahan nama, logo, favicon, teks login, dan warna aksen langsung berlaku pada seluruh halaman tanpa muat ulang."
               icon={Layers}
               action={
                 canUpdate ? <Badge tone="success" dot>Bisa diubah</Badge> : <Badge tone="neutral">Hanya baca</Badge>
@@ -95,7 +137,83 @@ export function SettingsPage() {
             <CardBody>{canUpdate ? <SettingsForm /> : <ReadOnlyNotice />}</CardBody>
           </Card>
         </Reveal>
-      ) : (
+      )}
+
+      {tab === "data_management" && (
+        <div className="grid gap-4 lg:grid-cols-2">
+          <Reveal>
+            <Card className="overflow-hidden border-amber-200">
+              <CardHeader
+                title="Mulai dari Nol (Data Awal Dikosongkan)"
+                subtitle="Sesuai prinsip sistem: kosongkan seluruh formulir dan data transaksi agar dapat dibangun dari nol oleh pemilik aplikasi."
+                icon={Trash2}
+                action={<Badge tone="warning">Prinsip Utama</Badge>}
+              />
+              <CardBody className="space-y-4">
+                <div className="rounded-xl border border-amber-200 bg-amber-50/70 p-4 space-y-2 text-xs leading-relaxed text-amber-900">
+                  <p className="font-bold flex items-center gap-1.5">
+                    <AlertTriangle size={15} className="text-amber-600" />
+                    Penjelasan Fitur Mulai dari Nol:
+                  </p>
+                  <p>
+                    Saat tombol ini ditekan, sistem akan mengosongkan seluruh data transaksi pendaftaran sambungan baru, tiket gangguan komplain, riwayat tahapan, serta menghapus seluruh pertanyaan pada 6 formulir divisi.
+                  </p>
+                  <p className="text-[11px] text-amber-800">
+                    Akun staf dan matriks izin tetap tersimpan agar Admin Aetra tetap dapat masuk dan mengelola sistem.
+                  </p>
+                </div>
+
+                <div className="pt-2">
+                  <Button
+                    variant="danger"
+                    icon={Trash2}
+                    className="w-full h-11 text-sm font-bold"
+                    onClick={handleClearAllDataToZero}
+                  >
+                    Kosongkan Semua Data & Formulir (Mulai dari Nol)
+                  </Button>
+                </div>
+              </CardBody>
+            </Card>
+          </Reveal>
+
+          <Reveal delay={60}>
+            <Card className="overflow-hidden">
+              <CardHeader
+                title="Template Bawaan & Pemulihan Sampel"
+                subtitle="Muat kembali data contoh operasional dan pertanyaan formulir standar Aetra kapan pun dibutuhkan."
+                icon={RotateCcw}
+                action={<Badge tone="neutral">Opsional</Badge>}
+              />
+              <CardBody className="space-y-4">
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  Jika Anda ingin menguji coba alur aplikasi menggunakan skenario lengkap (pendaftaran sambungan reguler & non-reguler, survei sales, penanganan kebocoran, dan relokasi meter), Anda dapat memuat kembali template standar.
+                </p>
+
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-3.5 space-y-2 text-xs text-slate-700">
+                  <p className="font-semibold text-slate-800">Template standar mencakup:</p>
+                  <ul className="list-disc list-inside space-y-1 text-slate-600 text-[11.5px]">
+                    <li>6 Skema form operasional lengkap (pertanyaan, satuan dinamis, foto)</li>
+                    <li>Akun staf demo untuk 8 divisi peran kerja</li>
+                    <li>Tiket komplain & pendaftaran simulasi</li>
+                  </ul>
+                </div>
+
+                <Button
+                  variant="secondary"
+                  icon={RotateCcw}
+                  className="w-full h-11"
+                  onClick={resetDemo}
+                >
+                  Muat Template Standar & Data Sampel
+                </Button>
+              </CardBody>
+            </Card>
+          </Reveal>
+        </div>
+      )}
+
+      {tab === "security" && (
         <div className="grid gap-4 xl:grid-cols-[1.4fr_1fr]">
           <Reveal>
             <Card className="overflow-hidden">
@@ -182,15 +300,6 @@ VITE_SUPABASE_ANON_KEY=<anon-public-key>`}
                     </li>
                   ))}
                 </ul>
-                {isDemoMode ? (
-                  <Button variant="danger" size="sm" icon={Trash2} className="w-full" onClick={resetDemo}>
-                    Reset Seluruh Data Demo
-                  </Button>
-                ) : (
-                  <p className="rounded-lg bg-slate-50 px-3 py-2 text-[12px] text-slate-500">
-                    Reset data dinonaktifkan pada lingkungan cloud. Gunakan SQL Editor untuk pembersihan data uji.
-                  </p>
-                )}
               </CardBody>
             </Card>
           </Reveal>

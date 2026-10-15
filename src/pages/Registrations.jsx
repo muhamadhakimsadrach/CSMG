@@ -116,12 +116,29 @@ export function RegistrationsPage() {
       },
       {
         key: "customer_name",
-        header: "Pemohon",
+        header: "Pemohon & Akun",
         render: (row) => (
-          <div className="min-w-0">
-            <p className="truncate text-[13px] font-semibold text-slate-800">{row.customer_name}</p>
-            <p className="truncate text-[11.5px] text-slate-400">
-              {row.service_type ?? "Pasang Baru"} · NIK {row.identity_number}
+          <div className="min-w-0 space-y-0.5">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="truncate text-[13px] font-semibold text-slate-800">{row.customer_name}</span>
+              {row.customer_number && (
+                <span className="rounded bg-emerald-50 px-1.5 py-0.2 font-mono text-[9.5px] font-bold text-emerald-700 border border-emerald-200">
+                  {row.customer_number}
+                </span>
+              )}
+              {row.sales_code && (
+                <span className="rounded bg-purple-50 px-1.5 py-0.2 font-mono text-[9.5px] font-bold text-purple-700 border border-purple-200">
+                  Sales: {row.sales_code}
+                </span>
+              )}
+              {row.non_regular_id && (
+                <span className="rounded bg-amber-50 px-1.5 py-0.2 font-mono text-[9.5px] font-bold text-amber-700 border border-amber-200">
+                  {row.non_regular_id}
+                </span>
+              )}
+            </div>
+            <p className="truncate text-[11px] text-slate-400">
+              {row.service_type ?? "Pasang Baru"} · {row.assigned_sales_name ? `Sales: ${row.assigned_sales_name}` : `NIK ${row.identity_number || "-"}`}
             </p>
           </div>
         ),
@@ -131,15 +148,24 @@ export function RegistrationsPage() {
         header: "Wilayah Pasang",
         render: (row) => (
           <div className="min-w-0">
-            <p className="truncate text-[13px] text-slate-700">{row.city || "—"}</p>
-            <p className="truncate text-[11.5px] text-slate-400">{row.province}</p>
+            <p className="truncate text-[13px] text-slate-700">{row.district || row.city || "—"}</p>
+            <p className="truncate text-[11.5px] text-slate-400">{row.village || row.address}</p>
           </div>
         ),
       },
       {
         key: "current_status_id",
-        header: "Status",
-        render: (row) => <StatusBadge status={statuses.find((s) => String(s.id) === String(row.current_status_id))} />,
+        header: "Status Layanan",
+        render: (row) => (
+          <div className="space-y-1">
+            <StatusBadge status={statuses.find((s) => String(s.id) === String(row.current_status_id))} />
+            {row.sales_rejected && (
+              <span className="block text-[9.5px] font-bold text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200">
+                ⚠️ Ditolak Sales
+              </span>
+            )}
+          </div>
+        ),
       },
       {
         key: "created_by",

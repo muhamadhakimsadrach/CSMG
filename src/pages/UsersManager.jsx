@@ -125,19 +125,26 @@ export function UsersManagerPage() {
           // Baris profil dibuat otomatis: oleh adapter pada mode demo,
           // dan oleh trigger handle_new_user() pada Supabase cloud.
         } else {
+          const updatePayload = {
+            full_name: form.full_name.trim(),
+            email: (form.email ?? "").trim().toLowerCase() || null,
+            role_id: form.role_id || null,
+            phone_number: form.phone_number || null,
+            department: form.department || null,
+            sales_code: form.sales_code?.trim() ? form.sales_code.trim().toUpperCase() : null,
+            is_active: form.is_active !== false,
+            updated_at: new Date().toISOString(),
+          };
           const { error } = await supabase
             .from("profiles")
-            .update({
-              full_name: form.full_name.trim(),
-              email: (form.email ?? "").trim().toLowerCase() || null,
-              role_id: form.role_id || null,
-              phone_number: form.phone_number || null,
-              department: form.department || null,
-              is_active: form.is_active !== false,
-              updated_at: new Date().toISOString(),
-            })
+            .update(updatePayload)
             .eq("id", modal.user.id);
           if (error) throw new Error(parseError(error, "Gagal memperbarui profil pengguna."));
+
+          // If password was entered during edit, update credentials
+          if (form.password?.trim()) {
+            await supabase.from("auth_users").update({ password: form.password.trim() }).eq("email", form.email.toLowerCase());
+          }
         }
 
         if (form.matrix?.length) {
