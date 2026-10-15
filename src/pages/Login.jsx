@@ -284,7 +284,27 @@ export function LoginPage() {
   return (
     <div className="grid min-h-dvh bg-white lg:grid-cols-[0.9fr_1.1fr]">
       <section className="relative flex min-h-dvh flex-col px-6 pb-7 pt-5 sm:px-10 xl:px-14 overflow-y-auto">
-        <BrandWordmark className="h-16 w-32 shrink-0" />
+        <div className="flex items-center justify-between">
+          <BrandWordmark className="h-16 w-32 shrink-0" />
+          <div className="flex items-center gap-2.5">
+            <a
+              href="https://www.aetra.co.id"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-brand-50 px-3 py-1.5 text-xs font-semibold text-brand-700 hover:bg-brand-100 transition-colors shadow-xs"
+            >
+              <ExternalLink size={13} /> Kenali Aetra
+            </a>
+            <a
+              href="https://www.aetra.co.id"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors shadow-xs"
+            >
+              <HelpCircle size={13} /> Bantuan Layanan
+            </a>
+          </div>
+        </div>
 
         <div className="mx-auto flex w-full max-w-[440px] flex-1 flex-col justify-center py-6">
           <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-brand-600">
