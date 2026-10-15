@@ -1,0 +1,6 @@
+{
+  "name": "Portal Layanan & Minor Repair Terpadu",
+  "description": "Aplikasi terintegrasi untuk Portal Pendaftaran Pelanggan, Papan Kerja Minor Repair, dan Pusat Pengaturan Workflow & RBAC dengan Supabase.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
