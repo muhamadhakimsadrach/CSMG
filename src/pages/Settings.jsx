@@ -57,43 +57,17 @@ export function SettingsPage() {
 
   const handleClearAllDataToZero = async () => {
     const ok = await confirmAction({
-      title: "Kosongkan Semua Data Awal (Mulai dari Nol)?",
-      message:
-        "Sesuai prinsip utama aplikasi: seluruh data pendaftaran pelanggan, tiket gangguan, riwayat status, dan formulir kustom akan dikosongkan (0 baris). Pemilik aplikasi dapat membangun seluruh form dan alur kerja dari nol secara mandiri. Lanjutkan?",
-      confirmLabel: "Ya, Kosongkan Semua Data",
+      title: "Kosongkan Semua Data (Mulai dari Nol)?",
+      message: "Seluruh data transaksi, pendaftaran, perbaikan, dan konfigurasi kustom akan dihapus permanen. Lanjutkan?",
+      confirmLabel: "Ya, Hapus Semua Data",
     });
     if (!ok) return;
 
-    try {
-      localStorage.setItem("aetra_registrations_v1", JSON.stringify([]));
-      localStorage.setItem("app_registrations", JSON.stringify([]));
-      localStorage.setItem("app_repair_orders", JSON.stringify([]));
-      localStorage.setItem("aetra_status_history_v1", JSON.stringify([]));
-      localStorage.setItem("aetra_activity_logs_v1", JSON.stringify([]));
-
-      const emptyForms = {
-        registration: [],
-        survey: [],
-        nc_check: [],
-        nc_completion: [],
-        complaint: [],
-        repair_completion: [],
-      };
-      localStorage.setItem("aetra_custom_forms_v1", JSON.stringify(emptyForms));
-
-      await supabase.from("status_history").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-      await supabase.from("repair_orders").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-      await supabase.from("registrations").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-
-      toast.success("Seluruh data operasional dan formulir berhasil dikosongkan. Memulai dari nol…", {
-        title: "Data Dikosongkan",
-      });
-      window.setTimeout(() => window.location.reload(), 700);
-    } catch (err) {
-      console.warn("Pembersihan database:", err);
-      toast.success("Data berhasil dikosongkan.");
-      window.setTimeout(() => window.location.reload(), 700);
-    }
+    localStorage.clear();
+    toast.success("Seluruh data berhasil dihapus. Aplikasi akan dimuat ulang...", {
+      title: "Data Dikosongkan",
+    });
+    window.setTimeout(() => window.location.reload(), 1000);
   };
 
   return (

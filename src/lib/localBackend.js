@@ -483,6 +483,13 @@ export function createLocalSupabase() {
 
   return {
     __local: true,
+    resetAllData() {
+      TABLES.forEach(t => writeJson(DB_KEY, {}));
+      writeJson(AUTH_KEY, []);
+      writeJson(SESSION_KEY, null);
+      localStorage.clear();
+      window.location.reload();
+    },
     from(table) {
       return new LocalQuery(table);
     },
