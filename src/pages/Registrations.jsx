@@ -226,7 +226,6 @@ export function RegistrationsPage() {
   return (
     <div className="space-y-5">
       <PageHeader
-        eyebrow="Modul A"
         title="Pendaftaran Sambungan Air"
         description="Kelola permohonan sambungan air Aetra Tangerang, dari verifikasi dokumen hingga pemasangan meter dan aktivasi."
         actions={

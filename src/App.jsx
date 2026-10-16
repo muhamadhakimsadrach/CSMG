@@ -24,13 +24,13 @@ import { FormManagementPage } from "@/pages/FormManagement";
 /** Peta rute: judul navbar, kunci modul untuk gerbang izin, dan komponen halaman. */
 const ROUTES = {
   "/dashboard": { title: "Dasbor Layanan", subtitle: "Ringkasan pendaftaran, perbaikan air, dan audit sistem", module: null, Page: DashboardPage },
-  "/registrations": { title: "Pendaftaran Pelanggan", subtitle: "Modul A - portal berkas pasang baru & verifikasi", module: "pendaftaran", Page: RegistrationsPage },
-  "/repairs": { title: "Gangguan & Perbaikan", subtitle: "Modul B - antrean pekerjaan, penugasan, dan SLA", module: "repair", Page: RepairBoardPage },
+  "/registrations": { title: "Pendaftaran Pelanggan", subtitle: "Portal berkas pasang baru & verifikasi", module: "pendaftaran", Page: RegistrationsPage },
+  "/repairs": { title: "Gangguan & Perbaikan", subtitle: "Antrean pekerjaan, penugasan, dan SLA", module: "repair", Page: RepairBoardPage },
   "/forms": { title: "Manajemen Form", subtitle: "Editor formulir kustom ala Google Forms untuk seluruh divisi", module: "pengaturan", Page: FormManagementPage },
-  "/workflow": { title: "Alur Kerja", subtitle: "Modul C - editor visual tahapan layanan", module: "workflow", Page: WorkflowBuilderPage },
-  "/users": { title: "Pengguna & Izin", subtitle: "Modul C - akun, peran, dan matriks akses", module: "pengguna", Page: UsersManagerPage },
-  "/logs": { title: "Log Aktivitas", subtitle: "Jejak audit perubahan data lintas modul", module: "log_aktivitas", Page: ActivityLogPage },
-  "/settings": { title: "Pusat Pengaturan", subtitle: "Modul C - branding, skema, dan keamanan", module: "pengaturan", Page: SettingsPage },
+  "/workflow": { title: "Alur Kerja", subtitle: "Editor visual tahapan layanan", module: "workflow", Page: WorkflowBuilderPage },
+  "/users": { title: "Pengguna & Izin", subtitle: "Akun, peran, dan matriks akses", module: "pengguna", Page: UsersManagerPage },
+  "/logs": { title: "Log Aktivitas", subtitle: "Jejak audit perubahan data lintas layanan", module: "log_aktivitas", Page: ActivityLogPage },
+  "/settings": { title: "Pusat Pengaturan", subtitle: "Branding, skema, dan keamanan", module: "pengaturan", Page: SettingsPage },
 };
 
 function Router() {

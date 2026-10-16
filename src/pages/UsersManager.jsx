@@ -316,7 +316,6 @@ export function UsersManagerPage() {
   return (
     <div className="space-y-5">
       <PageHeader
-        eyebrow="Modul C · Administrasi"
         title="Pengguna & Matriks Izin Akses"
         description="Kelola akun petugas, tentukan peran kerja, dan atur hak create/read/update/delete pada tiap modul aplikasi."
         actions={

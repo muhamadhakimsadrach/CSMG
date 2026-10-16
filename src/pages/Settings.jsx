@@ -99,7 +99,6 @@ export function SettingsPage() {
   return (
     <div className="space-y-5">
       <PageHeader
-        eyebrow="Modul C"
         title="Pusat Pengaturan & Administrator"
         description="Ubah identitas merek aplikasi, pasang skema keamanan, dan kendalikan lingkungan data."
       />

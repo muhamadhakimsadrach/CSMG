@@ -85,7 +85,6 @@ export function WorkflowBuilderPage() {
   return (
     <div className="space-y-5">
       <PageHeader
-        eyebrow="Modul C · Editor Alur Kerja"
         title="Visual Workflow Builder"
         description="Definisikan tahapan, warna penanda, dan divisi yang berhak memindahkan tiket pada tiap alur layanan."
         actions={
