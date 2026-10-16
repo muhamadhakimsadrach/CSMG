@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ImageIcon, RotateCcw, Save, Sparkles } from "lucide-react";
 import { Button } from "@/components/common/Button";
-import { Field, Input, Textarea } from "@/components/common/Field";
+import { Field, Input, Textarea, FileInput } from "@/components/common/Field";
 import { BrandWordmark } from "@/components/common/BrandMark";
 import { useBranding } from "@/context/BrandingContext";
 import { readFileAsDataUrl } from "@/lib/storage";
