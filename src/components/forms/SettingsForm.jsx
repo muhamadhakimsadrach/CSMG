@@ -61,6 +61,7 @@ export function SettingsForm() {
       form.login_title !== settings.login_title ||
       form.login_subtitle !== settings.login_subtitle ||
       form.login_badge !== settings.login_badge ||
+      form.login_hero_image !== settings.login_hero_image ||
       form.accent_color !== settings.accent_color ||
       form.support_email !== settings.support_email ||
       form.support_phone !== settings.support_phone ||
@@ -114,6 +115,50 @@ export function SettingsForm() {
                 </Field>
                 <Field label="Deskripsi / Paragraf Laman Login" className="sm:col-span-2" hint="Penjelasan fungsi portal di bawah judul">
                   <Textarea rows={2} value={form.login_subtitle ?? ""} onChange={(e) => set("login_subtitle", e.target.value)} placeholder="Akses staf internal, pendaftaran mandiri sambungan baru, pelacakan tagihan & pembayaran, atau komplain pelanggan." />
+                </Field>
+                <Field
+                  label="Foto / Gambar Hero Kanan Laman Login (URL Gambar)"
+                  className="sm:col-span-2"
+                  hint="Gambar latar belakang panel biru kanan login. Bebas royalti dan dapat diganti kapan saja."
+                >
+                  <Input
+                    value={form.login_hero_image ?? ""}
+                    onChange={(e) => set("login_hero_image", e.target.value)}
+                    placeholder="https://images.unsplash.com/... (atau biarkan kosong untuk gambar default)"
+                  />
+                  <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                    <span className="text-[10px] text-slate-500 font-semibold">Preset Cepat:</span>
+                    <button
+                      type="button"
+                      onClick={() => set("login_hero_image", "https://images.unsplash.com/photo-1518837695005-2083093ee35b?auto=format&fit=crop&w=1200&q=80")}
+                      className="rounded bg-white border border-slate-200 px-2 py-0.5 text-[10px] font-medium text-brand-700 hover:bg-brand-50"
+                    >
+                      Air Jernih Tenang
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => set("login_hero_image", "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1200&q=80")}
+                      className="rounded bg-white border border-slate-200 px-2 py-0.5 text-[10px] font-medium text-brand-700 hover:bg-brand-50"
+                    >
+                      Cahaya Air & Langit
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => set("login_hero_image", "https://images.unsplash.com/photo-1527334134460-f21a05ef62f3?auto=format&fit=crop&w=1200&q=80")}
+                      className="rounded bg-white border border-slate-200 px-2 py-0.5 text-[10px] font-medium text-brand-700 hover:bg-brand-50"
+                    >
+                      Aliran Air Riak
+                    </button>
+                    {form.login_hero_image && (
+                      <button
+                        type="button"
+                        onClick={() => set("login_hero_image", "")}
+                        className="rounded bg-rose-50 border border-rose-200 px-2 py-0.5 text-[10px] font-medium text-rose-700 hover:bg-rose-100"
+                      >
+                        Reset ke Default
+                      </button>
+                    )}
+                  </div>
                 </Field>
               </div>
             </div>

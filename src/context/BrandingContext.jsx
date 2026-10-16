@@ -27,6 +27,7 @@ const DEFAULT_SETTINGS = {
   login_title: "Portal Layanan Terpadu",
   login_subtitle: "Akses staf internal, pendaftaran mandiri sambungan baru, pelacakan tagihan & pembayaran, atau komplain pelanggan.",
   login_badge: "Layanan Air Terpadu PT Aetra",
+  login_hero_image: null,
 };
 
 /**
@@ -114,6 +115,7 @@ export function BrandingProvider({ children }) {
           login_title: (form.login_title ?? "").trim() || "Portal Layanan Terpadu",
           login_subtitle: (form.login_subtitle ?? "").trim() || "Akses staf internal, pendaftaran mandiri sambungan baru, pelacakan tagihan & pembayaran, atau komplain pelanggan.",
           login_badge: (form.login_badge ?? "").trim() || "Layanan Air Terpadu PT Aetra",
+          login_hero_image: (form.login_hero_image ?? "").trim() || null,
           updated_by: userId,
           updated_at: nowIso(),
         };

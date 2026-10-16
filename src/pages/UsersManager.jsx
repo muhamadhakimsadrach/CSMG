@@ -122,8 +122,7 @@ export function UsersManagerPage() {
             phoneNumber: form.phone_number,
             department: form.department,
           });
-          // Baris profil dibuat otomatis: oleh adapter pada mode demo,
-          // dan oleh trigger handle_new_user() pada Supabase cloud.
+          // Baris profil dibuat otomatis oleh sistem database.
         } else {
           const updatePayload = {
             full_name: form.full_name.trim(),
@@ -132,6 +131,7 @@ export function UsersManagerPage() {
             phone_number: form.phone_number || null,
             department: form.department || null,
             sales_code: form.sales_code?.trim() ? form.sales_code.trim().toUpperCase() : null,
+            customer_id: form.customer_id?.trim() ? form.customer_id.trim().toUpperCase() : null,
             is_active: form.is_active !== false,
             updated_at: new Date().toISOString(),
           };
@@ -201,9 +201,7 @@ export function UsersManagerPage() {
       if (!ok) return;
       setBusy(true);
       try {
-        const { error, data } = isDemoMode
-          ? await supabase.from("profiles").delete().eq("id", target.id)
-          : await supabase.functions.invoke("manage-users", { body: { action: "delete", id: target.id } });
+        const { error, data } = await supabase.from("profiles").delete().eq("id", target.id);
         if (data?.error) throw new Error(data.error);
         if (error) throw new Error(parseError(error, "Gagal mencabut akses pengguna."));
         await logActivity({

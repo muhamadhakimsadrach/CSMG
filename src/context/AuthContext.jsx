@@ -6,7 +6,7 @@ import { DEMO_ACCOUNTS } from "@/lib/seedData";
 const AuthContext = createContext(null);
 
 /**
- * AuthContext - sesi Supabase Auth + profil, peran, serta matriks izin granular.
+ * AuthContext - sesi autentikasi database terpadu + profil, peran, serta matriks izin granular.
  * Menyediakan helper `can(modul, aksi)` yang dipakai seluruh UI untuk gating.
  */
 export function AuthProvider({ children }) {
@@ -146,8 +146,62 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
+  const signInCustomer = useCallback(
+    async (customerId) => {
+      setActionError(null);
+      const clean = String(customerId || "").trim().toUpperCase();
+      if (!clean) throw new Error("Masukkan ID Pelanggan atau nomor pendaftaran Anda.");
+
+      let matchedReg = null;
+      try {
+        const { data: reg } = await supabase
+          .from("registrations")
+          .select("*")
+          .or(`customer_number.ilike.%${clean}%,ticket_number.ilike.%${clean}%,registration_no.ilike.%${clean}%,non_regular_id.ilike.%${clean}%`)
+          .maybeSingle();
+        if (reg) matchedReg = reg;
+      } catch (err) {
+        console.warn("Check reg error:", err);
+      }
+
+      if (!matchedReg) {
+        const local = JSON.parse(window.localStorage.getItem("app_registrations") || "[]");
+        matchedReg = local.find(
+          (r) =>
+            r.customer_number?.toUpperCase() === clean ||
+            r.ticket_number?.toUpperCase() === clean ||
+            r.registration_no?.toUpperCase() === clean ||
+            r.non_regular_id?.toUpperCase() === clean
+        );
+      }
+
+      const matchedProfile = (profiles ?? []).find(
+        (p) => p.customer_id && p.customer_id.toUpperCase() === clean
+      );
+
+      if (matchedReg) {
+        window.localStorage.setItem("aetra.active_customer_ticket", matchedReg.ticket_number || matchedReg.registration_no);
+        window.localStorage.setItem("aetra.active_customer_name", matchedReg.customer_name);
+        window.localStorage.setItem("aetra.active_customer_id", clean);
+      } else if (matchedProfile) {
+        window.localStorage.setItem("aetra.active_customer_name", matchedProfile.full_name);
+        window.localStorage.setItem("aetra.active_customer_id", clean);
+      } else {
+        window.localStorage.setItem("aetra.active_customer_id", clean);
+      }
+
+      const email = matchedProfile?.email || "pelanggan@aetra.demo";
+      const password = "Pelanggan123!";
+      return await signIn({ email, password });
+    },
+    [profiles, signIn]
+  );
+
   const signOut = useCallback(async () => {
     if (isDemoMode) window.localStorage.setItem("aetra.demo.signed-out", "true");
+    window.localStorage.removeItem("aetra.active_customer_ticket");
+    window.localStorage.removeItem("aetra.active_customer_name");
+    window.localStorage.removeItem("aetra.active_customer_id");
     await supabase.auth.signOut();
     setSession(null);
     setProfile(null);
@@ -212,12 +266,13 @@ export function AuthProvider({ children }) {
       can,
       canAny: (module) => ["create", "read", "update", "delete"].some((a) => can(module, a)),
       signIn,
+      signInCustomer,
       signUp,
       signOut,
       refresh,
       loadDirectory,
     };
-  }, [session, profile, profiles, roles, permissions, activeRole, isAdmin, booting, actionError, signIn, signUp, signOut, refresh, loadDirectory]);
+  }, [session, profile, profiles, roles, permissions, activeRole, isAdmin, booting, actionError, signIn, signInCustomer, signUp, signOut, refresh, loadDirectory]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

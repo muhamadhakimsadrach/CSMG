@@ -90,12 +90,7 @@ export const AdminSettings: React.FC<Props> = ({ initialTab = 'rbac' }) => {
       const res = await uploadFileToStorage(file, 'app-assets');
       setLogoUrl(res.url);
       updateAppSettings({ logo_url: res.url });
-      showToast(
-        res.isCloud
-          ? 'Logo berhasil diunggah ke Supabase Storage & diperbarui di aplikasi!'
-          : 'Logo berhasil disimpan secara lokal & diperbarui di aplikasi!',
-        'success'
-      );
+      showToast('Logo berhasil disimpan & diperbarui di aplikasi!', 'success');
     } catch (err: any) {
       showToast(`Gagal mengunggah logo: ${err.message}`, 'error');
     } finally {
@@ -179,7 +174,7 @@ export const AdminSettings: React.FC<Props> = ({ initialTab = 'rbac' }) => {
     { key: 'workflow_builder', label: 'Editor Alur Kerja (Workflow)', desc: 'Kustomisasi tahapan status alur' },
     { key: 'user_management', label: 'Manajemen Hak Akses & User', desc: 'Pengaturan akun tim & role RBAC' },
     { key: 'branding_customization', label: 'Kustomisasi Logo & Branding', desc: 'Ganti logo perusahaan & identitas' },
-    { key: 'database_schema', label: 'Skema Database & RLS', desc: 'Akses DDL dan generator Supabase SQL' },
+    { key: 'database_schema', label: 'Skema Database TiDB MySQL', desc: 'Akses DDL dan struktur tabel TiDB MySQL' },
   ];
 
   const currentRoleMatrix = roles.find((r) => r.id === selectedRoleForMatrix) || roles[1];
@@ -199,7 +194,7 @@ export const AdminSettings: React.FC<Props> = ({ initialTab = 'rbac' }) => {
           Pusat Pengaturan Sistem & Workflow
         </h1>
         <p className="text-xs text-slate-500 mt-1 max-w-3xl">
-          Kelola matriks hak akses per divisi (RBAC), kustomisasi logo dan branding perusahaan secara dinamis, visual alur kerja tiket, dan skema Supabase RLS.
+          Kelola matriks hak akses per divisi (RBAC), kustomisasi logo dan branding perusahaan secara dinamis, visual alur kerja tiket, dan skema TiDB MySQL.
         </p>
 
         {/* Navigation Tabs */}
@@ -453,7 +448,7 @@ export const AdminSettings: React.FC<Props> = ({ initialTab = 'rbac' }) => {
                     />
                   </label>
                   <p className="text-[11px] text-slate-500">
-                    Disimpan di Supabase Storage bucket <code className="bg-slate-200 px-1 py-0.5 rounded text-[10px]">app-assets</code>. Rekomendasi resolusi horizontal 200x50px atau transparan.
+                    Disimpan di direktori penyimpanan aset aplikasi. Rekomendasi resolusi horizontal 200x50px atau transparan.
                   </p>
 
                   {logoUrl && (
@@ -662,17 +657,17 @@ export const AdminSettings: React.FC<Props> = ({ initialTab = 'rbac' }) => {
         </div>
       )}
 
-      {/* TAB 4: SKEMA DATABASE & RLS SUPABASE */}
+      {/* TAB 4: SKEMA DATABASE RELASIONAL TIDB MYSQL */}
       {activeTab === 'schema' && (
         <div className="space-y-6">
           <div className="p-6 bg-white rounded-2xl border border-slate-200 shadow-xs space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
               <div>
                 <h3 className="text-sm font-bold text-slate-900">
-                  Skema Lengkap Database Supabase & Row Level Security (RLS)
+                  Skema Lengkap Database Relasional TiDB MySQL
                 </h3>
                 <p className="text-xs text-slate-500">
-                  Dapat langsung disalin dan dieksekusi di Supabase SQL Editor
+                  Dapat langsung disalin dan dieksekusi di TiDB Cloud Web SQL Editor atau MySQL CLI
                 </p>
               </div>
 
@@ -681,7 +676,7 @@ export const AdminSettings: React.FC<Props> = ({ initialTab = 'rbac' }) => {
                 className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-slate-900 hover:bg-slate-800 rounded-lg transition-colors shadow-xs cursor-pointer"
               >
                 {isCopied ? <CheckCircle2 className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
-                <span>{isCopied ? 'Tersalin ke Clipboard!' : 'Salin Kode SQL Lengkap'}</span>
+                <span>{isCopied ? 'Tersalin ke Clipboard!' : 'Salin Skema SQL TiDB MySQL'}</span>
               </button>
             </div>
 
@@ -690,30 +685,30 @@ export const AdminSettings: React.FC<Props> = ({ initialTab = 'rbac' }) => {
               <div className="space-y-1">
                 <span className="font-bold text-slate-800 flex items-center gap-1.5">
                   <span className="w-5 h-5 rounded-full bg-slate-800 text-white flex items-center justify-center text-[10px]">1</span>
-                  Buka Supabase Project
+                  Buka TiDB Cloud Console
                 </span>
                 <p className="text-[11px] text-slate-500">
-                  Masuk ke dashboard Supabase Anda dan pilih menu <strong>SQL Editor</strong> di sidebar kiri.
+                  Masuk ke dashboard TiDB Cloud cluster Anda dan buka menu <strong>SQL Editor</strong> atau terminal MySQL.
                 </p>
               </div>
 
               <div className="space-y-1">
                 <span className="font-bold text-slate-800 flex items-center gap-1.5">
                   <span className="w-5 h-5 rounded-full bg-slate-800 text-white flex items-center justify-center text-[10px]">2</span>
-                  Tempel & Jalankan Skrip
+                  Tempel & Jalankan Skrip DDL
                 </span>
                 <p className="text-[11px] text-slate-500">
-                  Klik tombol <strong>"Salin Kode SQL Lengkap"</strong> di atas, tempel di query editor, lalu klik <strong>RUN</strong>.
+                  Klik tombol <strong>"Salin Skema SQL TiDB MySQL"</strong> di atas, tempel di query editor, lalu jalankan query.
                 </p>
               </div>
 
               <div className="space-y-1">
                 <span className="font-bold text-slate-800 flex items-center gap-1.5">
                   <span className="w-5 h-5 rounded-full bg-slate-800 text-white flex items-center justify-center text-[10px]">3</span>
-                  Hubungkan Aplikasi
+                  Koneksi Database Aktif
                 </span>
                 <p className="text-[11px] text-slate-500">
-                  Klik tombol <strong>"Supabase"</strong> di header atas aplikasi ini dan masukkan Project URL & Anon Key.
+                  Konfigurasi host, port 4000, user, dan database telah terintegrasi untuk seluruh transaksi aplikasi.
                 </p>
               </div>
             </div>

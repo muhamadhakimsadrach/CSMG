@@ -9,14 +9,12 @@ import { SettingsForm } from "@/components/forms/SettingsForm";
 import { useAuth } from "@/context/AuthContext";
 import { useConfirm, useToast } from "@/context/ToastContext";
 import { isDemoMode, resetDemoData, supabase } from "@/lib/supabaseClient";
-import schemaSql from "../../supabase/schema.sql?raw";
-import waterMigration from "../../supabase/migrations/20261014_aetra_water_services.sql?raw";
 import { cn } from "@/utils/cn";
 
 const TABS = [
   { key: "branding", label: "Branding & Tampilan", icon: Image },
   { key: "data_management", label: "Mulai dari Nol & Pengaturan Data", icon: Database },
-  { key: "security", label: "Skema Supabase & RLS", icon: ShieldAlert },
+  { key: "security", label: "Integrasi TiDB MySQL & Database", icon: Database },
 ];
 
 /**
@@ -218,81 +216,77 @@ export function SettingsPage() {
           <Reveal>
             <Card className="overflow-hidden">
               <CardHeader
-                title="Skema Database Supabase"
-                subtitle="Jalankan berkas supabase/schema.sql pada SQL Editor untuk mengaktifkan tabel, fungsi, pemicu, dan kebijakan RLS."
+                title="Integrasi Database TiDB MySQL"
+                subtitle="Konfigurasi koneksi database terpusat berbasis TiDB Cloud / Serverless MySQL untuk PT Aetra Air Tangerang."
                 icon={Database}
-                action={
-                  <Button size="xs" variant="secondary" onClick={() => navigator.clipboard?.writeText(schemaSql).then(() => toast.success("Skema SQL disalin ke papan klip."), () => toast.warning("Peramban menolak akses papan klip."))}>
-                    Salin SQL
-                  </Button>
-                }
               />
-              <CardBody className="space-y-3">
-                <ol className="space-y-2.5 text-[13px] leading-relaxed text-slate-600">
-                  {[
-                    "Buat proyek Supabase lalu buka SQL Editor → New query.",
-                    "Tempel isi supabase/schema.sql (16 bagian) dan klik RUN.",
-                    "Buat akun petugas melalui Authentication → Users.",
-                    "Naikkan akun pertama menjadi Admin Pusat memakai UPDATE pada baris terakhir skema.",
-                    "Isi VITE_SUPABASE_URL dan VITE_SUPABASE_ANON_KEY, lalu jalankan ulang aplikasi.",
-                  ].map((step, i) => (
-                    <li key={step} className="flex gap-2.5">
-                      <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-md bg-brand-50 font-mono text-[11px] font-bold text-brand-700">
-                        {i + 1}
-                      </span>
-                      {step}
+              <CardBody className="space-y-4">
+                <div className="rounded-lg border border-emerald-100 bg-emerald-50/70 p-4">
+                  <div className="flex items-center gap-2">
+                    <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                    <p className="text-xs font-bold text-emerald-800">TiDB MySQL Terhubung & Aktif</p>
+                  </div>
+                  <p className="mt-1.5 text-xs text-emerald-700 leading-relaxed">
+                    Sistem menggunakan database relasional <strong>TiDB MySQL</strong>. Seluruh data registrasi, tiket perbaikan, dan akun staf tersimpan secara aman dan terpusat.
+                  </p>
+                </div>
+
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-3">
+                  <p className="text-xs font-bold text-slate-800">Langkah Mudah Menghubungkan TiDB MySQL:</p>
+                  <ol className="space-y-2 text-xs text-slate-600 list-decimal pl-4">
+                    <li>
+                      <strong>Buat Cluster TiDB Cloud:</strong> Masuk ke <a href="https://tidbcloud.com" target="_blank" rel="noreferrer" className="text-brand-600 underline font-semibold">tidbcloud.com</a> dan buat cluster Serverless baru (gratis).
                     </li>
-                  ))}
-                </ol>
-                <div className="rounded-lg border border-brand-100 bg-brand-50/50 p-3"><p className="text-xs font-semibold text-slate-700">Memperbarui instalasi yang sudah ada?</p><p className="mt-1 text-[11px] leading-relaxed text-slate-500">Jalankan hanya migrasi layanan air agar data pelanggan tetap tersimpan. Untuk administrasi akun cloud, terapkan Edge Function manage-users sesuai README.md.</p><Button type="button" variant="secondary" size="xs" className="mt-3" onClick={() => navigator.clipboard.writeText(waterMigration).then(() => toast.success("Migrasi layanan air disalin."), () => toast.error("Migrasi tidak dapat disalin. Buka berkas pada folder supabase/migrations."))}>Salin migrasi layanan air</Button></div>
-                <div className="rounded-lg border border-slate-200 bg-ink-900 p-3">
+                    <li>
+                      <strong>Salin Skema DDL:</strong> Buka tab <em>Skema Database TiDB MySQL</em> di menu samping, lalu klik <strong>Salin Skema SQL</strong>.
+                    </li>
+                    <li>
+                      <strong>Eksekusi di SQL Editor:</strong> Buka menu SQL Editor di TiDB Cloud, tempel skrip tersebut, dan klik <strong>Run</strong> untuk membuat tabel secara otomatis.
+                    </li>
+                    <li>
+                      <strong>Pasang Secret / .env:</strong> Masukkan kredensial host, port (4000), username, dan password ke dalam file `.env` aplikasi atau secret manager Anda.
+                    </li>
+                  </ol>
+                </div>
+
+                <div className="rounded-lg border border-slate-200 bg-ink-900 p-3.5">
                   <p className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
-                    <Terminal className="h-3.5 w-3.5" aria-hidden /> .env
+                    <Terminal className="h-3.5 w-3.5" aria-hidden /> Konfigurasi Aktif TiDB MySQL (.env)
                   </p>
                   <pre className="overflow-x-auto font-mono text-[12px] leading-relaxed text-slate-200">
-{`VITE_SUPABASE_URL=https://<projek-id>.supabase.co
-VITE_SUPABASE_ANON_KEY=<anon-public-key>`}
+{`TIDB_HOST=gateway01.ap-southeast-1.prod.aws.tidbcloud.com
+TIDB_PORT=4000
+TIDB_USER=2CMVuLuG9k63iXm.root
+TIDB_PASSWORD=OFBMKXukDxXav86B
+TIDB_DATABASE=sys
+TIDB_ENABLE_SSL=true`}
                   </pre>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setShowSql((v) => !v)}
-                  className="w-full rounded-lg border border-dashed border-slate-300 px-3 py-2 text-[12.5px] font-semibold text-slate-600 transition-colors hover:bg-slate-50"
-                >
-                  {showSql ? "Sembunyikan" : "Lihat"} seluruh berkas schema.sql ({schemaSql.split("\n").length} baris)
-                </button>
-                {showSql ? (
-                  <pre className="no-scrollbar max-h-[420px] overflow-auto rounded-lg border border-slate-200 bg-slate-50 p-3 font-mono text-[11.5px] leading-relaxed text-slate-600">
-                    {schemaSql}
-                  </pre>
-                ) : null}
               </CardBody>
             </Card>
           </Reveal>
 
           <Reveal delay={80}>
             <Card className="overflow-hidden">
-              <CardHeader title="Kondisi Lingkungan" subtitle="Status koneksi basis data yang sedang dipakai aplikasi." icon={ShieldAlert} />
+              <CardHeader title="Kondisi Lingkungan Basis Data" subtitle="Status tabel dan integritas data TiDB MySQL." icon={Database} />
               <CardBody className="space-y-4">
                 <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3.5">
                   <div className="flex items-center justify-between gap-2">
-                    <p className="text-[13px] font-semibold text-slate-800">{isDemoMode ? "Mode Demo Lokal" : "Terhubung Supabase Cloud"}</p>
-                    <Badge tone={isDemoMode ? "warning" : "success"} dot>
-                      {isDemoMode ? "localStorage" : "Supabase Cloud"}
+                    <p className="text-[13px] font-semibold text-slate-800">TiDB Serverless MySQL</p>
+                    <Badge tone="success" dot>
+                      Aktif
                     </Badge>
                   </div>
                   <p className="mt-1.5 text-[12px] leading-relaxed text-slate-500">
-                    {isDemoMode
-                      ? "Data simulasi disimpan di perangkat ini. Pembatasan antarmuka dapat dicoba, tetapi keamanan database dan kebijakan RLS harus diuji pada proyek Supabase tersendiri sebelum produksi."
-                      : "Klien memakai proyek Supabase Anda. Kebijakan Row Level Security menentukan baris yang dapat dibaca dan ditulis setiap peran."}
+                    Koneksi database relational terpadu aktif. Data pelanggan, verifikasi CS, dan penugasan divisi teknis dikelola secara tersentralisasi.
                   </p>
                 </div>
                 <ul className="space-y-2 text-[12.5px] text-slate-600">
                   {[
                     ["Tabel operasional", "registrations, repair_orders, status_history"],
                     ["Tabel tata kelola", "roles, permissions, profiles, app_settings, workflow_statuses, activity_logs"],
-                    ["Storage buckets", "app-assets (publik) & attachments (privat)"],
-                    ["Fungsi kunci", "is_admin_pusat(), has_module_permission(), next_ticket_number()"],
+                    ["Format ID Pelanggan", "PLG-XXXXXX (Reguler & Non-Reguler)"],
+                    ["Fungsi kunci", "Otomasi nomor tiket, delegasi divisi, matriks izin role"],
                   ].map(([label, value]) => (
                     <li key={label} className="flex flex-col gap-0.5 border-b border-dashed border-slate-100 pb-2 last:border-0">
                       <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">{label}</span>

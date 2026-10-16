@@ -6,7 +6,6 @@ import {
   ShieldCheck,
   ShieldAlert,
 } from 'lucide-react';
-import { SupabaseConfigModal } from './SupabaseConfigModal';
 
 export const Navbar: React.FC = () => {
   const {
@@ -15,13 +14,11 @@ export const Navbar: React.FC = () => {
     currentRole,
     users,
     switchUser,
-    supabaseConfig,
     activeView,
     setActiveView,
   } = useApp();
 
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
-  const [isSupabaseModalOpen, setIsSupabaseModalOpen] = useState(false);
 
   const getBreadcrumbLabel = () => {
     switch (activeView) {
@@ -38,7 +35,7 @@ export const Navbar: React.FC = () => {
       case 'branding_customization':
         return 'Kustomisasi Tampilan & Branding';
       case 'database_schema':
-        return 'Skema Database & RLS Supabase';
+        return 'Skema Database TiDB MySQL';
       default:
         return 'Sistem Operasional';
     }
@@ -120,20 +117,15 @@ export const Navbar: React.FC = () => {
 
         {/* Zone 3: Interactive Controls (Supabase indicator & Quick User/Role Switcher) */}
         <div className="flex items-center gap-2.5 shrink-0">
-          {/* Supabase Status Pill / Trigger */}
-          <button
-            onClick={() => setIsSupabaseModalOpen(true)}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 transition-colors cursor-pointer"
-            title="Konfigurasi Database Supabase"
+          {/* TiDB MySQL Status Pill */}
+          <div
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border border-slate-200 bg-white text-slate-700"
+            title="Database Relasional TiDB MySQL Terhubung"
           >
-            <Database className="w-3.5 h-3.5 text-indigo-600" />
-            <span className="hidden sm:inline">Supabase</span>
-            {supabaseConfig.isConnected ? (
-              <span className="w-2 h-2 rounded-full bg-emerald-500" title="Terhubung" />
-            ) : (
-              <span className="w-2 h-2 rounded-full bg-slate-300" title="Mode Demo" />
-            )}
-          </button>
+            <Database className="w-3.5 h-3.5 text-blue-600" />
+            <span className="hidden sm:inline">TiDB MySQL</span>
+            <span className="w-2 h-2 rounded-full bg-emerald-500" title="Aktif" />
+          </div>
 
           {/* Quick Role / User Switcher Dropdown */}
           <div className="relative">
@@ -220,12 +212,6 @@ export const Navbar: React.FC = () => {
           </div>
         </div>
       </header>
-
-      {/* Supabase Config Modal */}
-      <SupabaseConfigModal
-        isOpen={isSupabaseModalOpen}
-        onClose={() => setIsSupabaseModalOpen(false)}
-      />
     </>
   );
 };

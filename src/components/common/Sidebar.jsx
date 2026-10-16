@@ -17,9 +17,12 @@ export const NAV_ITEMS = [
 ];
 
 export function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onCloseMobile, activePath, onNavigate }) {
-  const { can, isAdmin, signOut, isDemoMode } = useAuth();
+  const { can, isAdmin, isCustomer, signOut, isDemoMode } = useAuth();
   const { settings } = useBranding();
-  const items = NAV_ITEMS.filter((item) => !item.module || can(item.module, "read") || isAdmin);
+
+  const items = isCustomer
+    ? [{ to: "/dashboard", label: "Portal Pelanggan", icon: LayoutDashboard, group: "LAYANAN AIR", module: null }]
+    : NAV_ITEMS.filter((item) => !item.module || can(item.module, "read") || isAdmin);
   return (
     <>
       <div className={cn("print-hide fixed inset-0 z-40 bg-slate-900/35 transition-opacity lg:hidden", mobileOpen ? "opacity-100" : "pointer-events-none opacity-0")} onClick={onCloseMobile} aria-hidden />

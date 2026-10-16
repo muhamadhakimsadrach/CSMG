@@ -56,6 +56,7 @@ export function seedRows() {
     avatar_url: null,
     phone_number: `08120000${1001 + index}`,
     sales_code: index === 4 ? "SLS-SARAH" : null,
+    customer_id: index === 7 ? "PLG-1008" : null,
     is_active: true,
     created_at: at(-180 * DAY),
     updated_at: at(-DAY),

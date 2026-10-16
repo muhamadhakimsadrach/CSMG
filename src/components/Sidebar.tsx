@@ -21,7 +21,6 @@ export const Sidebar: React.FC = () => {
     activeView,
     setActiveView,
     can,
-    supabaseConfig,
   } = useApp();
 
   const mainNavItems: { key: ModuleKey; label: string; icon: React.ReactNode }[] = [
@@ -174,12 +173,8 @@ export const Sidebar: React.FC = () => {
 
         <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between text-[10px] text-slate-500">
           <span className="flex items-center gap-1.5">
-            <span
-              className={`w-2 h-2 rounded-full ${
-                supabaseConfig.isConnected ? 'bg-emerald-500' : 'bg-slate-400'
-              }`}
-            />
-            {supabaseConfig.isConnected ? 'Supabase Live' : 'Demo Local'}
+            <span className="w-2 h-2 rounded-full bg-emerald-500" />
+            TiDB MySQL
           </span>
           <span className="text-slate-400 font-mono">v1.2.0</span>
         </div>

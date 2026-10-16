@@ -8,7 +8,6 @@ import {
   RepairOrder,
   ModuleKey,
   ModulePermission,
-  SupabaseConfig,
   RepairLog,
 } from '../types';
 import {
@@ -20,12 +19,6 @@ import {
   INITIAL_REGISTRATIONS,
   INITIAL_REPAIR_ORDERS,
 } from '../lib/mockData';
-import {
-  getStoredSupabaseConfig,
-  saveSupabaseConfig,
-  getSupabaseClient,
-  testSupabaseConnection,
-} from '../lib/supabaseClient';
 
 interface ToastState {
   message: string;
@@ -78,13 +71,6 @@ interface AppContextType {
   setActiveView: (view: ModuleKey) => void;
   toast: ToastState | null;
   showToast: (message: string, type?: 'success' | 'error' | 'info') => void;
-  
-  // Supabase
-  supabaseConfig: SupabaseConfig;
-  updateSupabaseCredentials: (url: string, key: string) => Promise<{ success: boolean; message: string }>;
-  disconnectSupabase: () => void;
-  isSyncing: boolean;
-  syncWithSupabase: () => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -132,17 +118,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [activeView, setActiveView] = useState<ModuleKey>('dashboard');
   const [toast, setToast] = useState<ToastState | null>(null);
-  const [isSyncing, setIsSyncing] = useState<boolean>(false);
-
-  // Supabase config state
-  const [supabaseConfig, setSupabaseConfig] = useState<SupabaseConfig>(() => {
-    const stored = getStoredSupabaseConfig();
-    return {
-      url: stored.url,
-      anonKey: stored.anonKey,
-      isConnected: Boolean(stored.url && stored.anonKey),
-    };
-  });
 
   // Current active user object & role
   const currentUser = users.find((u) => u.id === currentUserId) || users[0];
@@ -528,75 +503,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     showToast('Detail perbaikan berhasil diperbarui', 'success');
   };
 
-  // Supabase live sync
-  const updateSupabaseCredentials = async (url: string, key: string) => {
-    const testResult = await testSupabaseConnection(url, key);
-    if (testResult.success) {
-      saveSupabaseConfig(url, key);
-      setSupabaseConfig({
-        url,
-        anonKey: key,
-        isConnected: true,
-      });
-      showToast('Koneksi Supabase aktif! Data dapat disinkronkan.', 'success');
-      return { success: true, message: testResult.message };
-    } else {
-      return { success: false, message: testResult.message };
-    }
-  };
-
-  const disconnectSupabase = () => {
-    saveSupabaseConfig('', '');
-    setSupabaseConfig({
-      url: '',
-      anonKey: '',
-      isConnected: false,
-    });
-    showToast('Koneksi Supabase diputus. Kembali ke Mode Demo Lokal.', 'info');
-  };
-
-  const syncWithSupabase = async () => {
-    const client = getSupabaseClient();
-    if (!client) {
-      showToast('Supabase belum terhubung. Konfigurasi URL dan Anon Key terlebih dahulu.', 'error');
-      return;
-    }
-
-    setIsSyncing(true);
-    try {
-      // 1. Coba ambil app_settings
-      const { data: settingsData } = await client.from('app_settings').select('*').limit(1).maybeSingle();
-      if (settingsData) {
-        setAppSettings((prev) => ({
-          ...prev,
-          company_name: settingsData.company_name || prev.company_name,
-          company_tagline: settingsData.company_tagline || prev.company_tagline,
-          logo_url: settingsData.logo_url || prev.logo_url,
-          support_email: settingsData.support_email || prev.support_email,
-          support_phone: settingsData.support_phone || prev.support_phone,
-        }));
-      }
-
-      // 2. Coba sinkronisasi registrations
-      const { data: regData } = await client.from('registrations').select('*').order('created_at', { ascending: false });
-      if (regData && regData.length > 0) {
-        setRegistrations(regData);
-      }
-
-      // 3. Coba sinkronisasi repair orders
-      const { data: repData } = await client.from('repair_orders').select('*').order('created_at', { ascending: false });
-      if (repData && repData.length > 0) {
-        setRepairOrders(repData);
-      }
-
-      showToast('Sinkronisasi data Supabase berhasil!', 'success');
-    } catch (e: any) {
-      showToast(`Gagal sinkronisasi: ${e?.message || 'Error jaringan'}`, 'error');
-    } finally {
-      setIsSyncing(false);
-    }
-  };
-
   return (
     <AppContext.Provider
       value={{
@@ -632,11 +538,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setActiveView,
         toast,
         showToast,
-        supabaseConfig,
-        updateSupabaseCredentials,
-        disconnectSupabase,
-        isSyncing,
-        syncWithSupabase,
       }}
     >
       {children}

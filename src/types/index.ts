@@ -117,9 +117,3 @@ export interface RepairOrder {
   updated_at: string;
   logs: RepairLog[];
 }
-
-export interface SupabaseConfig {
-  url: string;
-  anonKey: string;
-  isConnected: boolean;
-}

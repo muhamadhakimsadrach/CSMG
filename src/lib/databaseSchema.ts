@@ -1,280 +1,145 @@
-export const SUPABASE_SQL_SCHEMA = `-- ==============================================================================
--- SKEMA DATABASE LENGKAP & ROW LEVEL SECURITY (RLS) SUPABASE
--- Aplikasi: Portal Layanan Pendaftaran, Papan Kerja Minor Repair & Pengaturan
+export const TIDB_MYSQL_SCHEMA = `-- ==============================================================================
+-- SKEMA RELASIONAL DATABASE TIDB MYSQL
+-- Aplikasi: Portal Layanan Terpusat PT Aetra Air Tangerang
+-- Kompatibel: TiDB Cloud, TiDB Serverless, MySQL 8.0+
 -- ==============================================================================
 
--- 1. Ekstensi UUID (bawaan Supabase)
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+-- 1. TABEL PENGATURAN APLIKASI (app_settings)
+CREATE TABLE IF NOT EXISTS app_settings (
+    id VARCHAR(36) PRIMARY KEY,
+    app_name VARCHAR(120) NOT NULL DEFAULT 'Aetra Tangerang',
+    company_name VARCHAR(150) NOT NULL DEFAULT 'PT Aetra Air Tangerang',
+    company_tagline VARCHAR(255) DEFAULT 'Air bersih, kehidupan lebih baik.',
+    logo_url TEXT,
+    login_hero_image TEXT,
+    support_email VARCHAR(100) DEFAULT 'care@aetra.co.id',
+    support_phone VARCHAR(50) DEFAULT '+62 21 590 8888',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ------------------------------------------------------------------------------
--- 2. TABEL PENGATURAN APLIKASI (app_settings)
--- Menyimpan nama perusahaan, logo dinamis, dan kontak support
--- ------------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS public.app_settings (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    company_name TEXT NOT NULL DEFAULT 'PT Solusi Terpadu Nusantara',
-    company_tagline TEXT DEFAULT 'Enterprise Customer Care & Minor Repair Workflow',
-    logo_url TEXT DEFAULT '',
-    support_email TEXT DEFAULT 'support@solusiterpadu.id',
-    support_phone TEXT DEFAULT '+62 21 5550 1988',
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
-);
-
--- ------------------------------------------------------------------------------
--- 3. TABEL ROLES & PERMISSIONS (RBAC)
--- Menyimpan definisi peran divisi dan hak akses per modul
--- ------------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS public.roles (
-    id TEXT PRIMARY KEY,
-    name TEXT NOT NULL,
-    division TEXT NOT NULL,
+-- 2. TABEL PERAN & HAK AKSES (roles)
+CREATE TABLE IF NOT EXISTS roles (
+    id VARCHAR(36) PRIMARY KEY,
+    role_name VARCHAR(80) NOT NULL UNIQUE,
+    division VARCHAR(80) NOT NULL,
     description TEXT,
-    is_admin BOOLEAN DEFAULT false,
-    permissions JSONB NOT NULL DEFAULT '{}'::jsonb,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
-);
+    is_admin TINYINT(1) DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ------------------------------------------------------------------------------
--- 4. TABEL PROFIL PENGGUNA (users_profile)
--- Relasi dengan auth.users Supabase dan tabel roles
--- ------------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS public.users_profile (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
-    name TEXT NOT NULL,
-    email TEXT NOT NULL UNIQUE,
-    role_id TEXT REFERENCES public.roles(id) ON DELETE RESTRICT,
-    division TEXT NOT NULL,
+-- 3. TABEL MATRIKS IZIN MODUL (permissions)
+CREATE TABLE IF NOT EXISTS permissions (
+    id VARCHAR(36) PRIMARY KEY,
+    role_id VARCHAR(36) NOT NULL,
+    module VARCHAR(60) NOT NULL,
+    can_read TINYINT(1) DEFAULT 0,
+    can_create TINYINT(1) DEFAULT 0,
+    can_update TINYINT(1) DEFAULT 0,
+    can_delete TINYINT(1) DEFAULT 0,
+    INDEX idx_permissions_role (role_id),
+    CONSTRAINT fk_permissions_role FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 4. TABEL PENGGUNA & STAF (profiles)
+CREATE TABLE IF NOT EXISTS profiles (
+    id VARCHAR(36) PRIMARY KEY,
+    email VARCHAR(120) NOT NULL UNIQUE,
+    full_name VARCHAR(120) NOT NULL,
+    role_id VARCHAR(36) NOT NULL,
+    phone VARCHAR(30),
+    customer_id VARCHAR(50),
     avatar_url TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
-);
+    is_active TINYINT(1) DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_profiles_customer_id (customer_id),
+    CONSTRAINT fk_profiles_role FOREIGN KEY (role_id) REFERENCES roles(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ------------------------------------------------------------------------------
--- 5. TABEL TAHAPAN ALUR KERJA (workflow_stages)
--- Dikelola secara visual oleh Admin Pusat untuk pendaftaran dan minor repair
--- ------------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS public.workflow_stages (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    category TEXT NOT NULL CHECK (category IN ('registration', 'repair')),
-    step_order INTEGER NOT NULL,
-    name TEXT NOT NULL,
-    slug TEXT NOT NULL,
-    description TEXT,
-    assigned_division TEXT NOT NULL,
-    color_badge TEXT DEFAULT '#3b82f6',
-    sla_hours INTEGER DEFAULT 24,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
-);
+-- 5. TABEL TAHAPAN ALUR KERJA (workflow_statuses)
+CREATE TABLE IF NOT EXISTS workflow_statuses (
+    id VARCHAR(36) PRIMARY KEY,
+    workflow_type VARCHAR(40) NOT NULL DEFAULT 'registration',
+    step_order INT NOT NULL,
+    label VARCHAR(100) NOT NULL,
+    color VARCHAR(30) DEFAULT 'blue',
+    requires_approval TINYINT(1) DEFAULT 0,
+    assigned_division VARCHAR(60),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_workflow_type_order (workflow_type, step_order)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ------------------------------------------------------------------------------
--- 6. TABEL PENDAFTARAN PELANGGAN (registrations)
--- Data pendaftaran pelanggan baru dan status berkas
--- ------------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS public.registrations (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    registration_no TEXT NOT NULL UNIQUE,
-    customer_name TEXT NOT NULL,
-    identity_no TEXT NOT NULL,
-    email TEXT NOT NULL,
-    phone TEXT NOT NULL,
-    service_type TEXT NOT NULL,
-    package_plan TEXT NOT NULL,
-    installation_address TEXT NOT NULL,
-    status TEXT NOT NULL DEFAULT 'Menunggu Verifikasi',
-    documents JSONB DEFAULT '[]'::jsonb,
+-- 6. TABEL PENDAFTARAN SAMBUNGAN AIR (registrations)
+CREATE TABLE IF NOT EXISTS registrations (
+    id VARCHAR(36) PRIMARY KEY,
+    registration_number VARCHAR(60) NOT NULL UNIQUE,
+    customer_number VARCHAR(60) UNIQUE,
+    full_name VARCHAR(120) NOT NULL,
+    identity_no VARCHAR(40) NOT NULL,
+    phone VARCHAR(30) NOT NULL,
+    email VARCHAR(120),
+    address TEXT NOT NULL,
+    category VARCHAR(40) DEFAULT 'Rumah Tangga',
+    status VARCHAR(80) NOT NULL DEFAULT 'Draft Pendaftaran',
+    current_status_id VARCHAR(36),
+    assigned_surveyor VARCHAR(120),
+    assigned_technician VARCHAR(120),
+    survey_date DATETIME,
+    pipe_distance_meters DECIMAL(8,2) DEFAULT 0,
+    connection_type VARCHAR(40) DEFAULT 'Reguler',
+    initial_payment_status VARCHAR(30) DEFAULT 'pending',
+    initial_payment_amount DECIMAL(12,2) DEFAULT 1500000.00,
+    initial_paid_at DATETIME,
+    non_regular_payment_status VARCHAR(30) DEFAULT 'unbilled',
+    non_regular_payment_amount DECIMAL(12,2) DEFAULT 0.00,
+    non_regular_paid_at DATETIME,
+    meter_serial_number VARCHAR(80),
+    installed_at DATETIME,
+    csat_rating INT,
+    csat_feedback TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_reg_customer_number (customer_number),
+    INDEX idx_reg_identity_no (identity_no),
+    INDEX idx_reg_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 7. TABEL TIKET GANGGUAN & PERBAIKAN (repair_orders)
+CREATE TABLE IF NOT EXISTS repair_orders (
+    id VARCHAR(36) PRIMARY KEY,
+    order_number VARCHAR(60) NOT NULL UNIQUE,
+    customer_number VARCHAR(60),
+    customer_name VARCHAR(120) NOT NULL,
+    phone VARCHAR(30) NOT NULL,
+    address TEXT NOT NULL,
+    issue_type VARCHAR(80) NOT NULL,
+    priority VARCHAR(20) DEFAULT 'normal',
+    status VARCHAR(60) NOT NULL DEFAULT 'Laporan Diterima CS',
+    sla_hours INT DEFAULT 24,
+    assigned_technician VARCHAR(120),
+    materials_used JSON,
+    completion_notes TEXT,
+    csat_score INT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_repair_customer_number (customer_number),
+    INDEX idx_repair_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 8. TABEL RIWAYAT STATUS & AUDIT LOG (status_history)
+CREATE TABLE IF NOT EXISTS status_history (
+    id VARCHAR(36) PRIMARY KEY,
+    entity_type VARCHAR(40) NOT NULL,
+    entity_id VARCHAR(36) NOT NULL,
+    from_status VARCHAR(80),
+    to_status VARCHAR(80) NOT NULL,
+    actor_name VARCHAR(120) NOT NULL,
     notes TEXT,
-    created_by TEXT NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
-);
-
--- ------------------------------------------------------------------------------
--- 7. TABEL PAPAN KERJA MINOR REPAIR (repair_orders & repair_logs)
--- Data tiket pekerjaan teknisi dan riwayat perbaikan
--- ------------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS public.repair_orders (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    ticket_no TEXT NOT NULL UNIQUE,
-    customer_name TEXT NOT NULL,
-    contact_phone TEXT NOT NULL,
-    unit_name TEXT NOT NULL,
-    serial_number TEXT NOT NULL,
-    category TEXT NOT NULL,
-    issue_description TEXT NOT NULL,
-    priority TEXT NOT NULL CHECK (priority IN ('Rendah', 'Sedang', 'Tinggi', 'Darurat')),
-    status TEXT NOT NULL DEFAULT 'Tiket Masuk',
-    assigned_technician TEXT,
-    estimated_cost NUMERIC(12, 2) DEFAULT 0,
-    parts_used JSONB DEFAULT '[]'::jsonb,
-    repair_notes TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS public.repair_logs (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    repair_order_id UUID REFERENCES public.repair_orders(id) ON DELETE CASCADE,
-    author_name TEXT NOT NULL,
-    author_role TEXT NOT NULL,
-    action_summary TEXT NOT NULL,
-    note TEXT,
-    status_transition TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
-);
-
--- ==============================================================================
--- 8. PENGATURAN SUPABASE STORAGE (BUCKETS)
--- Buat bucket untuk logo perusahaan dan lampiran dokumen pendaftaran
--- ==============================================================================
--- Eksekusi di Storage Tab / SQL:
-INSERT INTO storage.buckets (id, name, public)
-VALUES ('app-assets', 'app-assets', true)
-ON CONFLICT (id) DO NOTHING;
-
-INSERT INTO storage.buckets (id, name, public)
-VALUES ('documents', 'documents', true)
-ON CONFLICT (id) DO NOTHING;
-
--- Policy Storage: Publik dapat membaca logo, authenticated user dapat upload
-CREATE POLICY "Public read app assets" ON storage.objects FOR SELECT USING (bucket_id = 'app-assets');
-CREATE POLICY "Auth users upload app assets" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'app-assets');
-
-CREATE POLICY "Public read documents" ON storage.objects FOR SELECT USING (bucket_id = 'documents');
-CREATE POLICY "Auth users upload documents" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'documents');
-
--- ==============================================================================
--- 9. ROW LEVEL SECURITY (RLS) POLICIES
--- Membatasi hak akses di tingkat database
--- ==============================================================================
-
--- Aktifkan RLS di setiap tabel
-ALTER TABLE public.app_settings ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.roles ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.users_profile ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.workflow_stages ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.registrations ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.repair_orders ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.repair_logs ENABLE ROW LEVEL SECURITY;
-
--- Helper Function: Mengecek apakah user adalah Admin Pusat
-CREATE OR REPLACE FUNCTION public.is_admin_user()
-RETURNS BOOLEAN AS $$
-BEGIN
-    RETURN EXISTS (
-        SELECT 1 FROM public.users_profile up
-        JOIN public.roles r ON up.role_id = r.id
-        WHERE up.user_id = auth.uid() AND r.is_admin = true
-    );
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- Kebijakan RLS app_settings: Semua user bisa melihat, hanya Admin Pusat yang bisa edit
-CREATE POLICY "Semua user dapat melihat app_settings"
-    ON public.app_settings FOR SELECT USING (true);
-CREATE POLICY "Hanya Admin Pusat dapat mengubah app_settings"
-    ON public.app_settings FOR ALL USING (public.is_admin_user());
-
--- Kebijakan RLS roles: Semua user dapat melihat roles, hanya Admin Pusat dapat mengubah
-CREATE POLICY "Semua user dapat membaca roles"
-    ON public.roles FOR SELECT USING (true);
-CREATE POLICY "Hanya Admin Pusat dapat mengelola roles"
-    ON public.roles FOR ALL USING (public.is_admin_user());
-
--- Kebijakan RLS users_profile:
-CREATE POLICY "User dapat membaca profil tim"
-    ON public.users_profile FOR SELECT USING (true);
-CREATE POLICY "Hanya Admin Pusat dapat menambah / mengedit profil user"
-    ON public.users_profile FOR ALL USING (public.is_admin_user());
-
--- Kebijakan RLS workflow_stages:
-CREATE POLICY "Semua user dapat membaca workflow_stages"
-    ON public.workflow_stages FOR SELECT USING (true);
-CREATE POLICY "Hanya Admin Pusat yang dapat mengatur alur kerja"
-    ON public.workflow_stages FOR ALL USING (public.is_admin_user());
-
--- Kebijakan RLS registrations:
--- Admin Pusat punya akses penuh; Divisi Sales/Admin dapat CRUD; Divisi Teknik/lainnya hanya SELECT jika punya izin
-CREATE POLICY "Akses baca pendaftaran pelanggan"
-    ON public.registrations FOR SELECT USING (true);
-CREATE POLICY "Akses tambah/edit pendaftaran"
-    ON public.registrations FOR ALL USING (
-        public.is_admin_user() OR EXISTS (
-            SELECT 1 FROM public.users_profile up
-            JOIN public.roles r ON up.role_id = r.id
-            WHERE up.user_id = auth.uid()
-            AND (r.permissions->'portal_pendaftaran'->>'view')::boolean = true
-        )
-    );
-
--- Kebijakan RLS repair_orders:
--- Admin Pusat & Divisi Teknik dapat mengelola tiket perbaikan
-CREATE POLICY "Akses baca repair orders"
-    ON public.repair_orders FOR SELECT USING (true);
-CREATE POLICY "Akses kelola repair orders"
-    ON public.repair_orders FOR ALL USING (
-        public.is_admin_user() OR EXISTS (
-            SELECT 1 FROM public.users_profile up
-            JOIN public.roles r ON up.role_id = r.id
-            WHERE up.user_id = auth.uid()
-            AND (r.permissions->'papan_repair'->>'view')::boolean = true
-        )
-    );
-
--- Kebijakan RLS repair_logs:
-CREATE POLICY "Semua user dengan izin dapat membaca log perbaikan"
-    ON public.repair_logs FOR SELECT USING (true);
-CREATE POLICY "User dapat menambahkan log perbaikan"
-    ON public.repair_logs FOR INSERT WITH CHECK (true);
-
--- ==============================================================================
--- 10. SEED DATA AWAL (PERAN, SETTINGS, & ALUR KERJA)
--- ==============================================================================
-INSERT INTO public.app_settings (id, company_name, company_tagline, logo_url)
-VALUES (
-    'a0000000-0000-0000-0000-000000000001',
-    'PT Solusi Terpadu Nusantara',
-    'Enterprise Customer Portal, Minor Repair Hub & Workflow Center',
-    ''
-) ON CONFLICT (id) DO NOTHING;
-
-INSERT INTO public.roles (id, name, division, description, is_admin, permissions)
-VALUES 
-(
-    'admin_pusat',
-    'Admin Pusat',
-    'Manajemen Pusat',
-    'Akses tak terbatas ke seluruh modul, konfigurasi sistem, RBAC, dan audit.',
-    true,
-    '{"dashboard": {"view": true}, "portal_pendaftaran": {"view": true, "create": true, "edit": true, "delete": true, "verify": true}, "papan_repair": {"view": true, "create": true, "edit": true, "delete": true, "manage": true}, "workflow_builder": {"view": true, "manage": true}, "user_management": {"view": true, "manage": true}, "branding_customization": {"view": true, "manage": true}, "database_schema": {"view": true}}'::jsonb
-),
-(
-    'divisi_teknik',
-    'Divisi Teknik',
-    'Teknik & Pemeliharaan',
-    'Fokus penanganan Minor Repair, update status perbaikan, dan catatan suku cadang.',
-    false,
-    '{"dashboard": {"view": true}, "portal_pendaftaran": {"view": true, "create": false, "edit": false, "delete": false, "verify": false}, "papan_repair": {"view": true, "create": true, "edit": true, "delete": false, "manage": true}, "workflow_builder": {"view": true, "manage": false}, "user_management": {"view": false}, "branding_customization": {"view": false}, "database_schema": {"view": false}}'::jsonb
-),
-(
-    'divisi_sales',
-    'Divisi Sales & Marketing',
-    'Sales & Akuisisi',
-    'Input pendaftaran pelanggan baru, follow up calon pelanggan, dan upload berkas.',
-    false,
-    '{"dashboard": {"view": true}, "portal_pendaftaran": {"view": true, "create": true, "edit": true, "delete": false, "verify": false}, "papan_repair": {"view": true, "create": false, "edit": false, "delete": false, "manage": false}, "workflow_builder": {"view": false}, "user_management": {"view": false}, "branding_customization": {"view": false}, "database_schema": {"view": false}}'::jsonb
-),
-(
-    'divisi_admin',
-    'Divisi Admin & CS',
-    'Operasional & CS',
-    'Verifikasi berkas pendaftaran pelanggan, penerimaan keluhan tiket repair, dan monitoring SLA.',
-    false,
-    '{"dashboard": {"view": true}, "portal_pendaftaran": {"view": true, "create": true, "edit": true, "delete": false, "verify": true}, "papan_repair": {"view": true, "create": true, "edit": true, "delete": false, "manage": false}, "workflow_builder": {"view": false}, "user_management": {"view": false}, "branding_customization": {"view": false}, "database_schema": {"view": false}}'::jsonb
-)
-ON CONFLICT (id) DO NOTHING;
-
--- Selesai. Skema siap dijalankan di Supabase SQL Editor.
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_history_entity (entity_type, entity_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 `;
+
+export const SUPABASE_SQL_SCHEMA = TIDB_MYSQL_SCHEMA;

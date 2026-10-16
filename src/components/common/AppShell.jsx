@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Menu } from "lucide-react";
+import { LayoutDashboard, Menu } from "lucide-react";
 import { Navbar } from "./Navbar";
 import { NAV_ITEMS, Sidebar } from "./Sidebar";
 import { useAuth } from "@/context/AuthContext";
@@ -10,8 +10,10 @@ export function AppShell({ title, children }) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const { path, navigate } = useRoute();
-  const { can, isAdmin } = useAuth();
-  const mobileItems = NAV_ITEMS.filter((item) => ["/dashboard", "/registrations", "/repairs"].includes(item.to) && (!item.module || can(item.module, "read") || isAdmin));
+  const { can, isAdmin, isCustomer } = useAuth();
+  const mobileItems = isCustomer
+    ? [{ to: "/dashboard", label: "Portal Pelanggan", icon: LayoutDashboard }]
+    : NAV_ITEMS.filter((item) => ["/dashboard", "/registrations", "/repairs"].includes(item.to) && (!item.module || can(item.module, "read") || isAdmin));
   return (
     <div className="flex min-h-dvh w-full bg-[#f7f9fc]">
       <Sidebar collapsed={collapsed} onToggleCollapse={() => setCollapsed((v) => !v)} mobileOpen={mobileOpen} onCloseMobile={() => setMobileOpen(false)} activePath={path} onNavigate={navigate} />

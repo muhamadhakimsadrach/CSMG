@@ -1,5 +1,5 @@
 // ============================================================================
-// Utilitas unggah berkas ke Supabase Storage (bucket app-assets & attachments)
+// Utilitas unggah berkas penyimpanan dokumen & aset
 // dengan validasi tipe/ukuran serta penamaan aman.
 // ============================================================================
 

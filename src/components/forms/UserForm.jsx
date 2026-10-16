@@ -27,6 +27,7 @@ export function UserForm({ editingUser = null, roles = [], permissions = [], onC
     role_id: "",
     password: "",
     sales_code: "",
+    customer_id: "",
     is_active: true,
   });
   const [matrix, setMatrix] = useState(emptyMatrix);
@@ -43,7 +44,7 @@ export function UserForm({ editingUser = null, roles = [], permissions = [], onC
 
   useEffect(() => {
     if (!editingUser) {
-      setValues({ full_name: "", email: "", phone_number: "", department: "", role_id: roles[1]?.id ?? roles[0]?.id ?? "", password: "", sales_code: "", is_active: true });
+      setValues({ full_name: "", email: "", phone_number: "", department: "", role_id: roles[1]?.id ?? roles[0]?.id ?? "", password: "", sales_code: "", customer_id: "", is_active: true });
       setMatrix(emptyMatrix());
       return;
     }
@@ -54,6 +55,7 @@ export function UserForm({ editingUser = null, roles = [], permissions = [], onC
       department: editingUser.department ?? "",
       role_id: editingUser.role_id ?? "",
       sales_code: editingUser.sales_code ?? "",
+      customer_id: editingUser.customer_id ?? "",
       password: "",
       is_active: editingUser.is_active !== false,
     });
@@ -141,6 +143,16 @@ export function UserForm({ editingUser = null, roles = [], permissions = [], onC
               value={values.sales_code}
               onChange={(e) => set("sales_code", e.target.value.toUpperCase())}
               placeholder="Contoh: SLS-SARAH atau SLS-002"
+              className="font-mono font-bold uppercase text-brand-700"
+            />
+          </Field>
+        )}
+        {/pelanggan/i.test(selectedRole?.role_name || "") && (
+          <Field label="ID Pelanggan (Monthly / Akun)" hint="Nomor unik untuk login pelanggan tanpa password">
+            <Input
+              value={values.customer_id}
+              onChange={(e) => set("customer_id", e.target.value.toUpperCase())}
+              placeholder="Contoh: PLG-1008 atau AETRA-001"
               className="font-mono font-bold uppercase text-brand-700"
             />
           </Field>
