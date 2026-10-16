@@ -42,6 +42,12 @@ export function seedRows() {
   const profiles = [
     { id: id(1001), email: "admin@aetra.demo", full_name: "Rani Prameswari", role_id: id(1), department: "Manajemen Pusat & Pengaturan", phone_number: "081200001001", is_active: true, created_at: new Date().toISOString() },
     { id: id(1002), email: "cs@aetra.demo", full_name: "Intan Permatasari", role_id: id(2), department: "Pintu Masuk Pendaftaran & Complain", phone_number: "081200001002", is_active: true, created_at: new Date().toISOString() },
+    { id: id(1003), email: "spv.sales@aetra.demo", full_name: "Bagas Adhi Nugroho", role_id: id(3), department: "Supervisor Divisi Sales", phone_number: "081200001003", is_active: true, created_at: new Date().toISOString() },
+    { id: id(1004), email: "spv.technical@aetra.demo", full_name: "Fikri Maulana", role_id: id(4), department: "Supervisor Divisi Teknik", phone_number: "081200001004", is_active: true, created_at: new Date().toISOString() },
+    { id: id(1005), email: "sales@aetra.demo", full_name: "Sarah Wijaya", role_id: id(5), department: "Petugas Survey & Pendaftaran", phone_number: "081200001005", is_active: true, created_at: new Date().toISOString() },
+    { id: id(1006), email: "nc@aetra.demo", full_name: "Joko Susilo", role_id: id(6), department: "Tim Instalasi Sambungan Baru", phone_number: "081200001006", is_active: true, created_at: new Date().toISOString() },
+    { id: id(1007), email: "repair@aetra.demo", full_name: "Dedi Kurniawan", role_id: id(7), department: "Tim Perbaikan & Material", phone_number: "081200001007", is_active: true, created_at: new Date().toISOString() },
+    { id: id(1008), email: "pelanggan@aetra.demo", full_name: "Warga Pengguna", role_id: id(8), department: "Portal Pemohon & Pengadu", phone_number: "081200001008", is_active: true, created_at: new Date().toISOString() },
   ];
 
   const permissions = [];
