@@ -57,14 +57,25 @@ export function SettingsPage() {
 
   const handleClearAllDataToZero = async () => {
     const ok = await confirmAction({
-      title: "Kosongkan Semua Data (Mulai dari Nol)?",
-      message: "Seluruh data transaksi, pendaftaran, perbaikan, dan konfigurasi kustom akan dihapus permanen. Lanjutkan?",
-      confirmLabel: "Ya, Hapus Semua Data",
+      title: "Kosongkan Data Transaksi?",
+      message: "Seluruh data pendaftaran dan tiket perbaikan akan dihapus. Akun staf, data pelanggan, dan formulir kustom akan tetap tersimpan. Lanjutkan?",
+      confirmLabel: "Ya, Hapus Data Transaksi",
     });
     if (!ok) return;
 
-    localStorage.clear();
-    toast.success("Seluruh data berhasil dihapus. Aplikasi akan dimuat ulang...", {
+    // Daftar kunci data yang boleh dihapus
+    const keysToRemove = [
+      "app_registrations",
+      "app_repair_orders",
+      "aetra_status_history_v1",
+      "aetra_activity_logs_v1",
+      "aetra.db.v2",
+      "aetra.session.v2"
+    ];
+    
+    keysToRemove.forEach(key => localStorage.removeItem(key));
+
+    toast.success("Data transaksi berhasil dihapus. Akun dan formulir tetap tersimpan.", {
       title: "Data Dikosongkan",
     });
     window.setTimeout(() => window.location.reload(), 1000);
