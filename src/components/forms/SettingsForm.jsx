@@ -116,50 +116,51 @@ export function SettingsForm() {
                 <Field label="Deskripsi / Paragraf Laman Login" className="sm:col-span-2" hint="Penjelasan fungsi portal di bawah judul">
                   <Textarea rows={2} value={form.login_subtitle ?? ""} onChange={(e) => set("login_subtitle", e.target.value)} placeholder="Akses staf internal, pendaftaran mandiri sambungan baru, pelacakan tagihan & pembayaran, atau komplain pelanggan." />
                 </Field>
-                <Field
-                  label="Foto / Gambar Hero Kanan Laman Login (URL Gambar)"
-                  className="sm:col-span-2"
+                <FileInput
+                  label="Foto / Gambar Hero Kanan Laman Login"
+                  file={form.heroImageFile}
+                  previewUrl={form.login_hero_image}
+                  onFile={async (file, error) => {
+                    if (error) {
+                      setErrors((prev) => ({ ...prev, hero: error }));
+                      return;
+                    }
+                    set("heroImageFile", file);
+                    set("login_hero_image", await previewFile(file));
+                  }}
+                  onClear={() => {
+                    set("heroImageFile", null);
+                    set("login_hero_image", "");
+                  }}
+                  error={errors.hero}
                   hint="Gambar latar belakang panel biru kanan login. Bebas royalti dan dapat diganti kapan saja."
-                >
-                  <Input
-                    value={form.login_hero_image ?? ""}
-                    onChange={(e) => set("login_hero_image", e.target.value)}
-                    placeholder="https://images.unsplash.com/... (atau biarkan kosong untuk gambar default)"
-                  />
-                  <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                    <span className="text-[10px] text-slate-500 font-semibold">Preset Cepat:</span>
-                    <button
-                      type="button"
-                      onClick={() => set("login_hero_image", "https://images.unsplash.com/photo-1518837695005-2083093ee35b?auto=format&fit=crop&w=1200&q=80")}
-                      className="rounded bg-white border border-slate-200 px-2 py-0.5 text-[10px] font-medium text-brand-700 hover:bg-brand-50"
-                    >
-                      Air Jernih Tenang
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => set("login_hero_image", "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1200&q=80")}
-                      className="rounded bg-white border border-slate-200 px-2 py-0.5 text-[10px] font-medium text-brand-700 hover:bg-brand-50"
-                    >
-                      Cahaya Air & Langit
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => set("login_hero_image", "https://images.unsplash.com/photo-1527334134460-f21a05ef62f3?auto=format&fit=crop&w=1200&q=80")}
-                      className="rounded bg-white border border-slate-200 px-2 py-0.5 text-[10px] font-medium text-brand-700 hover:bg-brand-50"
-                    >
-                      Aliran Air Riak
-                    </button>
-                    {form.login_hero_image && (
-                      <button
-                        type="button"
-                        onClick={() => set("login_hero_image", "")}
-                        className="rounded bg-rose-50 border border-rose-200 px-2 py-0.5 text-[10px] font-medium text-rose-700 hover:bg-rose-100"
-                      >
-                        Reset ke Default
-                      </button>
-                    )}
-                  </div>
-                </Field>
+                />
+
+                {/* Preset cepat tetap dipertahankan */}
+                <div className="flex flex-wrap items-center gap-1.5 -mt-2">
+                  <span className="text-[10px] text-slate-500 font-semibold">Preset Cepat:</span>
+                  <button
+                    type="button"
+                    onClick={() => set("login_hero_image", "https://images.unsplash.com/photo-1518837695005-2083093ee35b?auto=format&fit=crop&w=1200&q=80")}
+                    className="rounded bg-white border border-slate-200 px-2 py-0.5 text-[10px] font-medium text-brand-700 hover:bg-brand-50"
+                  >
+                    Air Jernih Tenang
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => set("login_hero_image", "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1200&q=80")}
+                    className="rounded bg-white border border-slate-200 px-2 py-0.5 text-[10px] font-medium text-brand-700 hover:bg-brand-50"
+                  >
+                    Cahaya Air & Langit
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => set("login_hero_image", "https://images.unsplash.com/photo-1527334134460-f21a05ef62f3?auto=format&fit=crop&w=1200&q=80")}
+                    className="rounded bg-white border border-slate-200 px-2 py-0.5 text-[10px] font-medium text-brand-700 hover:bg-brand-50"
+                  >
+                    Aliran Air Riak
+                  </button>
+                </div>
               </div>
             </div>
 

@@ -89,6 +89,7 @@ export function BrandingProvider({ children }) {
       try {
         let logoUrl = settings.logo_url ?? null;
         let faviconUrl = settings.favicon_url ?? null;
+        let heroImageUrl = form.login_hero_image ?? null;
 
         if (form.logoFile instanceof File) {
           const res = await uploadFile(form.logoFile, { bucket: "assets", folder: "branding" });
@@ -103,6 +104,11 @@ export function BrandingProvider({ children }) {
         } else if (form.faviconFile === null) {
           faviconUrl = null;
         }
+        
+        if (form.heroImageFile instanceof File) {
+          const res = await uploadFile(form.heroImageFile, { bucket: "assets", folder: "branding" });
+          heroImageUrl = res.url;
+        }
 
         const payload = {
           app_name: form.app_name.trim(),
@@ -115,7 +121,7 @@ export function BrandingProvider({ children }) {
           login_title: (form.login_title ?? "").trim() || "Portal Layanan Terpadu",
           login_subtitle: (form.login_subtitle ?? "").trim() || "Akses staf internal, pendaftaran mandiri sambungan baru, pelacakan tagihan & pembayaran, atau komplain pelanggan.",
           login_badge: (form.login_badge ?? "").trim() || "Layanan Air Terpadu PT Aetra",
-          login_hero_image: (form.login_hero_image ?? "").trim() || null,
+          login_hero_image: heroImageUrl,
           updated_by: userId,
           updated_at: nowIso(),
         };
