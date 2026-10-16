@@ -227,7 +227,7 @@ export function LoginPage() {
                       {staffError}
                     </p>
                   )}
-                  <Field label="Email akun staf" required>
+                  <Field label="Username akun staf" required>
                     <Input
                       type="email"
                       icon={Mail}
