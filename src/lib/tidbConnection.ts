@@ -1,4 +1,4 @@
-import mysql.promise from 'mysql2';
+import mysql from 'mysql2/promise';
 
 const tidbConfig = {
   host: process.env.TIDB_HOST || 'gateway01.ap-southeast-1.prod.aws.tidbcloud.com',
