@@ -254,14 +254,26 @@ export function LoginPage() {
                   </Button>
                 </form>
 
-                {isDemoMode && (
-                  <div className="mt-5 border-t border-slate-100 pt-4">
-                    <p className="mb-1 flex items-center gap-1.5 text-[11px] font-semibold text-slate-700">
+                {/* Panel Akun Demo & 1-Klik */}
+                <div className="mt-5 border-t border-slate-100 pt-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-700">
                       <ShieldCheck size={13} className="text-brand-500" /> Kredensial 1-Klik Semua Role Staf
                     </p>
-                    <p className="mb-2 text-[10px] text-slate-400">
-                      Pilih role divisi untuk simulasi tugas secara instan:
-                    </p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const cur = window.localStorage.getItem("aetra.hide_demo_accounts") === "true";
+                        window.localStorage.setItem("aetra.hide_demo_accounts", cur ? "false" : "true");
+                        window.location.reload();
+                      }}
+                      className="text-[10px] font-semibold text-brand-600 hover:underline cursor-pointer"
+                    >
+                      {window.localStorage.getItem("aetra.hide_demo_accounts") === "true" ? "Tampilkan Akun Demo" : "Sembunyikan Akun"}
+                    </button>
+                  </div>
+
+                  {window.localStorage.getItem("aetra.hide_demo_accounts") !== "true" && (
                     <div className="max-h-48 space-y-1.5 overflow-y-auto pr-1">
                       {DEMO_ACCOUNTS.filter((a) => a.label !== "Pelanggan").map((account) => (
                         <div
@@ -298,8 +310,8 @@ export function LoginPage() {
                         </div>
                       ))}
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
             )}
 

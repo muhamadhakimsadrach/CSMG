@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { isDemoMode, parseError, supabase } from "@/lib/supabaseClient";
+import { createLocalSupabase } from "@/lib/localBackend";
 import { nowIso } from "@/lib/utils";
 import { DEMO_ACCOUNTS } from "@/lib/seedData";
 
@@ -107,11 +108,16 @@ export function AuthProvider({ children }) {
     async ({ email, password }) => {
       setActionError(null);
       try {
-        const { data, error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
-        if (error) throw new Error(parseError(error, "Gagal masuk. Periksa kredensial Anda."));
+        let authRes = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+        if (authRes.error && supabase.__local) {
+          // Force local signin fallback if demo accounts aren't seeded in remote auth
+          const localClient = createLocalSupabase();
+          authRes = await localClient.auth.signInWithPassword({ email, password });
+        }
+        if (authRes.error) throw new Error(parseError(authRes.error, "Gagal masuk. Periksa kredensial Anda."));
         if (isDemoMode) window.localStorage.removeItem("aetra.demo.signed-out");
-        setSession(data.session);
-        const dir = await loadDirectory(data.session.user);
+        setSession(authRes.data.session);
+        const dir = await loadDirectory(authRes.data.session.user);
         return dir;
       } catch (error) {
         setActionError(error.message);
