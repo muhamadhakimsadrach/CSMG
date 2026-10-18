@@ -35,7 +35,7 @@ export const Navbar: React.FC = () => {
       case 'branding_customization':
         return 'Kustomisasi Tampilan & Branding';
       case 'database_schema':
-        return 'Skema Database TiDB MySQL';
+        return 'Skema Database Supabase';
       default:
         return 'Sistem Operasional';
     }
@@ -117,14 +117,14 @@ export const Navbar: React.FC = () => {
 
         {/* Zone 3: Interactive Controls (Supabase indicator & Quick User/Role Switcher) */}
         <div className="flex items-center gap-2.5 shrink-0">
-          {/* TiDB MySQL Status Pill */}
+          {/* Supabase Status Pill */}
           <div
             className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border border-slate-200 bg-white text-slate-700"
-            title="Database Relasional TiDB MySQL Terhubung"
+            title="Database Supabase Realtime"
           >
-            <Database className="w-3.5 h-3.5 text-blue-600" />
-            <span className="hidden sm:inline">TiDB MySQL</span>
-            <span className="w-2 h-2 rounded-full bg-emerald-500" title="Aktif" />
+            <Database className="w-3.5 h-3.5 text-emerald-600" />
+            <span className="hidden sm:inline">Supabase</span>
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" title="Realtime Aktif" />
           </div>
 
           {/* Quick Role / User Switcher Dropdown */}

@@ -2,26 +2,23 @@ import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { ModuleKey } from '../types';
 import { uploadFileToStorage } from '../lib/supabaseClient';
-import { SUPABASE_SQL_SCHEMA } from '../lib/databaseSchema';
+
 import {
   Shield,
   Users2,
   Palette,
   GitFork,
-  Database,
   Plus,
   Trash2,
   Upload,
   ArrowUp,
   ArrowDown,
-  Copy,
-  CheckCircle2,
   Building,
   Save,
 } from 'lucide-react';
 
 interface Props {
-  initialTab?: 'rbac' | 'branding' | 'workflow' | 'schema';
+  initialTab?: 'rbac' | 'branding' | 'workflow';
 }
 
 export const AdminSettings: React.FC<Props> = ({ initialTab = 'rbac' }) => {
@@ -44,12 +41,11 @@ export const AdminSettings: React.FC<Props> = ({ initialTab = 'rbac' }) => {
   } = useApp();
 
   // Active Tab
-  const [activeTab, setActiveTab] = useState<'rbac' | 'branding' | 'workflow' | 'schema'>(() => {
+  const [activeTab, setActiveTab] = useState<'rbac' | 'branding' | 'workflow'>(() => {
     if (activeView === 'user_management') return 'rbac';
     if (activeView === 'branding_customization') return 'branding';
     if (activeView === 'workflow_builder') return 'workflow';
-    if (activeView === 'database_schema') return 'schema';
-    return initialTab;
+    return initialTab === 'schema' as any ? 'rbac' : initialTab;
   });
 
   // Branding Form State
@@ -77,8 +73,7 @@ export const AdminSettings: React.FC<Props> = ({ initialTab = 'rbac' }) => {
   const [newStageColor, setNewStageColor] = useState('#3b82f6');
   const [newStageSla, setNewStageSla] = useState(12);
 
-  // SQL Copy state
-  const [isCopied, setIsCopied] = useState(false);
+
 
   // Handle Logo Upload via Supabase Storage
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -128,13 +123,6 @@ export const AdminSettings: React.FC<Props> = ({ initialTab = 'rbac' }) => {
     setIsAddUserOpen(false);
   };
 
-  const handleCopySql = () => {
-    navigator.clipboard.writeText(SUPABASE_SQL_SCHEMA);
-    setIsCopied(true);
-    showToast('Skrip SQL lengkap berhasil disalin ke clipboard!', 'success');
-    setTimeout(() => setIsCopied(false), 3000);
-  };
-
   // Move workflow stage up/down
   const moveStage = (category: 'registration' | 'repair', index: number, direction: 'up' | 'down') => {
     const list = category === 'registration' ? [...registrationStages] : [...repairStages];
@@ -174,7 +162,6 @@ export const AdminSettings: React.FC<Props> = ({ initialTab = 'rbac' }) => {
     { key: 'workflow_builder', label: 'Editor Alur Kerja (Workflow)', desc: 'Kustomisasi tahapan status alur' },
     { key: 'user_management', label: 'Manajemen Hak Akses & User', desc: 'Pengaturan akun tim & role RBAC' },
     { key: 'branding_customization', label: 'Kustomisasi Logo & Branding', desc: 'Ganti logo perusahaan & identitas' },
-    { key: 'database_schema', label: 'Skema Database TiDB MySQL', desc: 'Akses DDL dan struktur tabel TiDB MySQL' },
   ];
 
   const currentRoleMatrix = roles.find((r) => r.id === selectedRoleForMatrix) || roles[1];
@@ -194,7 +181,7 @@ export const AdminSettings: React.FC<Props> = ({ initialTab = 'rbac' }) => {
           Pusat Pengaturan Sistem & Workflow
         </h1>
         <p className="text-xs text-slate-500 mt-1 max-w-3xl">
-          Kelola matriks hak akses per divisi (RBAC), kustomisasi logo dan branding perusahaan secara dinamis, visual alur kerja tiket, dan skema TiDB MySQL.
+          Kelola matriks hak akses per divisi (RBAC), kustomisasi logo dan branding perusahaan secara dinamis, dan visual alur kerja tiket.
         </p>
 
         {/* Navigation Tabs */}
@@ -203,7 +190,6 @@ export const AdminSettings: React.FC<Props> = ({ initialTab = 'rbac' }) => {
             { id: 'rbac', label: 'Manajemen RBAC & User', icon: <Users2 className="w-4 h-4" /> },
             { id: 'branding', label: 'Branding & Logo Dinamis', icon: <Palette className="w-4 h-4" /> },
             { id: 'workflow', label: 'Editor Alur Kerja (Workflow)', icon: <GitFork className="w-4 h-4" /> },
-            { id: 'schema', label: 'Skema Database & RLS', icon: <Database className="w-4 h-4" /> },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -212,7 +198,6 @@ export const AdminSettings: React.FC<Props> = ({ initialTab = 'rbac' }) => {
                 if (tab.id === 'rbac') setActiveView('user_management');
                 if (tab.id === 'branding') setActiveView('branding_customization');
                 if (tab.id === 'workflow') setActiveView('workflow_builder');
-                if (tab.id === 'schema') setActiveView('database_schema');
               }}
               className={`flex items-center gap-2 px-3.5 py-2.5 text-xs font-medium border-b-2 transition-all whitespace-nowrap cursor-pointer ${
                 activeTab === tab.id
@@ -657,71 +642,7 @@ export const AdminSettings: React.FC<Props> = ({ initialTab = 'rbac' }) => {
         </div>
       )}
 
-      {/* TAB 4: SKEMA DATABASE RELASIONAL TIDB MYSQL */}
-      {activeTab === 'schema' && (
-        <div className="space-y-6">
-          <div className="p-6 bg-white rounded-2xl border border-slate-200 shadow-xs space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
-              <div>
-                <h3 className="text-sm font-bold text-slate-900">
-                  Skema Lengkap Database Relasional TiDB MySQL
-                </h3>
-                <p className="text-xs text-slate-500">
-                  Dapat langsung disalin dan dieksekusi di TiDB Cloud Web SQL Editor atau MySQL CLI
-                </p>
-              </div>
 
-              <button
-                onClick={handleCopySql}
-                className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-slate-900 hover:bg-slate-800 rounded-lg transition-colors shadow-xs cursor-pointer"
-              >
-                {isCopied ? <CheckCircle2 className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
-                <span>{isCopied ? 'Tersalin ke Clipboard!' : 'Salin Skema SQL TiDB MySQL'}</span>
-              </button>
-            </div>
-
-            {/* Quick 3-Step Guide */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-4 bg-slate-50 rounded-xl border border-slate-200 text-xs">
-              <div className="space-y-1">
-                <span className="font-bold text-slate-800 flex items-center gap-1.5">
-                  <span className="w-5 h-5 rounded-full bg-slate-800 text-white flex items-center justify-center text-[10px]">1</span>
-                  Buka TiDB Cloud Console
-                </span>
-                <p className="text-[11px] text-slate-500">
-                  Masuk ke dashboard TiDB Cloud cluster Anda dan buka menu <strong>SQL Editor</strong> atau terminal MySQL.
-                </p>
-              </div>
-
-              <div className="space-y-1">
-                <span className="font-bold text-slate-800 flex items-center gap-1.5">
-                  <span className="w-5 h-5 rounded-full bg-slate-800 text-white flex items-center justify-center text-[10px]">2</span>
-                  Tempel & Jalankan Skrip DDL
-                </span>
-                <p className="text-[11px] text-slate-500">
-                  Klik tombol <strong>"Salin Skema SQL TiDB MySQL"</strong> di atas, tempel di query editor, lalu jalankan query.
-                </p>
-              </div>
-
-              <div className="space-y-1">
-                <span className="font-bold text-slate-800 flex items-center gap-1.5">
-                  <span className="w-5 h-5 rounded-full bg-slate-800 text-white flex items-center justify-center text-[10px]">3</span>
-                  Koneksi Database Aktif
-                </span>
-                <p className="text-[11px] text-slate-500">
-                  Konfigurasi host, port 4000, user, dan database telah terintegrasi untuk seluruh transaksi aplikasi.
-                </p>
-              </div>
-            </div>
-
-            {/* SQL Code Block */}
-            <div className="relative">
-              <pre className="p-4 bg-slate-900 text-slate-100 rounded-xl text-xs font-mono overflow-x-auto max-h-[480px] leading-relaxed">
-                {SUPABASE_SQL_SCHEMA}
-              </pre>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Modal Tambah User Baru */}
       {isAddUserOpen && (

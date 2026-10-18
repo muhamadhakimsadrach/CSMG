@@ -96,36 +96,9 @@ export function DashboardPage() {
         supabase.from("repair_orders").select("*").order("created_at", { ascending: false }).limit(2000),
         supabase.from("activity_logs").select("*").order("created_at", { ascending: false }).limit(10),
       ]);
-      let tidbRegistrations = [];
-      try {
-        const res = await fetch("/api/registrations");
-        if (res.ok) {
-          tidbRegistrations = await res.json();
-        }
-      } catch {
-        // fallback to standard store
-      }
-
-      const localRegs = reg.data ?? [];
-      const combinedRegs = [...localRegs];
-      if (Array.isArray(tidbRegistrations)) {
-        for (const tr of tidbRegistrations) {
-          if (!combinedRegs.some((r) => r.id === tr.id || (tr.ticket_number && r.ticket_number === tr.ticket_number))) {
-            combinedRegs.unshift({
-              ...tr,
-              ticket_number: tr.ticket_number || tr.registration_no || `REG-${tr.id}`,
-              customer_name: tr.customer_name || "Pelanggan Baru",
-              service_type: tr.service_type || "Rumah tangga",
-              address: tr.address || "Kabupaten Tangerang",
-              status: tr.status || "Pendaftaran diterima",
-              created_at: tr.created_at || new Date().toISOString(),
-            });
-          }
-        }
-      }
 
       setData({
-        registrations: combinedRegs,
+        registrations: reg.data ?? [],
         repairs: repair.data ?? [],
         logs: activity.data ?? [],
       });
@@ -140,6 +113,27 @@ export function DashboardPage() {
 
   useEffect(() => {
     load();
+
+    // Langganan pembaruan Supabase Realtime
+    try {
+      if (typeof supabase?.channel === "function") {
+        const channel = supabase
+          .channel("dashboard-realtime-sync")
+          .on("postgres_changes", { event: "*", schema: "public", table: "registrations" }, () => {
+            load();
+          })
+          .on("postgres_changes", { event: "*", schema: "public", table: "repair_orders" }, () => {
+            load();
+          })
+          .subscribe();
+
+        return () => {
+          supabase.removeChannel?.(channel);
+        };
+      }
+    } catch (e) {
+      // fallback
+    }
   }, [load]);
 
   // If role is Pelanggan, render the dedicated Customer Portal Dashboard
@@ -2358,17 +2352,17 @@ function AdminMasterDashboard({
         </section>
       </div>
 
-      {/* Banner Realtime TiDB */}
+      {/* Banner Realtime Supabase */}
       <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div className="flex items-center gap-2.5">
           <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse" />
           <div>
-            <p className="text-xs font-bold text-emerald-900">Database TiDB MySQL Terhubung & Aktif Realtime</p>
-            <p className="text-[11px] text-emerald-700">Cluster: gateway01.ap-southeast-1.prod.aws.tidbcloud.com (Port 4000)</p>
+            <p className="text-xs font-bold text-emerald-900">Database Supabase Cloud Terhubung & Sinkronisasi Realtime Aktif</p>
+            <p className="text-[11px] text-emerald-700">Pembaruan pendaftaran, alur kerja, dan perbaikan tersinkronisasi otomatis seketika.</p>
           </div>
         </div>
         <Button size="xs" variant="secondary" onClick={() => navigate("/settings")} className="self-start sm:self-auto">
-          Lihat Konfigurasi Database &rarr;
+          Lihat Konfigurasi Supabase &rarr;
         </Button>
       </div>
 
