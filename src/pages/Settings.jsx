@@ -8,8 +8,7 @@ import { Reveal } from "@/components/common/Reveal";
 import { SettingsForm } from "@/components/forms/SettingsForm";
 import { useAuth } from "@/context/AuthContext";
 import { useConfirm, useToast } from "@/context/ToastContext";
-import { resetDemoData, supabase, getSupabaseConfig, configureSupabase, disconnectSupabase, testSupabaseConnection } from "@/lib/supabaseClient";
-import { SUPABASE_SQL_SCHEMA } from "@/lib/databaseSchema";
+import { resetDemoData, supabase } from "@/lib/supabaseClient";
 import { cn } from "@/utils/cn";
 
 const TABS = [

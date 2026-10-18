@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { isDemoMode, parseError, supabase } from "@/lib/supabaseClient";
+import { isDemoMode, parseError, db } from "@/lib/dbClient";
 import { createLocalSupabase } from "@/lib/localBackend";
 import { nowIso } from "@/lib/utils";
 import { DEMO_ACCOUNTS } from "@/lib/seedData";
@@ -113,21 +113,7 @@ export function AuthProvider({ children }) {
     async ({ email, password }) => {
       setActionError(null);
       try {
-        let authRes;
-        if (supabase.__local) {
-          authRes = await supabase.auth.signInWithPassword({ email, password });
-        } else {
-          try {
-            authRes = await supabase.auth.signInWithPassword({ email: email.trim(), password });
-          } catch (e) {
-            const localClient = createLocalSupabase();
-            authRes = await localClient.auth.signInWithPassword({ email, password });
-          }
-        }
-        if (authRes.error) {
-          const localClient = createLocalSupabase();
-          authRes = await localClient.auth.signInWithPassword({ email, password });
-        }
+        const authRes = await supabase.auth.signInWithPassword({ email: email.trim(), password });
         if (authRes.error) throw new Error(parseError(authRes.error, "Gagal masuk. Periksa kredensial Anda."));
         if (isDemoMode) window.localStorage.removeItem("aetra.demo.signed-out");
         setSession(authRes.data.session);

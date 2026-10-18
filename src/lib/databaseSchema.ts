@@ -84,15 +84,32 @@ CREATE TABLE IF NOT EXISTS public.activity_logs (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- 5. TABEL STATUS ALUR KERJA (workflow_statuses)
+CREATE TABLE IF NOT EXISTS public.workflow_statuses (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    workflow_type TEXT NOT NULL,
+    step_order INT NOT NULL,
+    status_name TEXT NOT NULL,
+    color_code TEXT DEFAULT '#3b82f6',
+    sla_hours INT DEFAULT 12,
+    is_initial BOOLEAN DEFAULT FALSE,
+    is_final BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- AKTIFKAN FITUR REALTIME SUPABASE UNTUK SETIAP TABEL
 ALTER PUBLICATION supabase_realtime ADD TABLE public.registrations;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.repair_orders;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.app_settings;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.activity_logs;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.workflow_statuses;
 
 -- Nonaktifkan RLS untuk kemudahan integrasi awal
 ALTER TABLE public.registrations DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.repair_orders DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.app_settings DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.activity_logs DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.workflow_statuses DISABLE ROW LEVEL SECURITY;
 `;
+
