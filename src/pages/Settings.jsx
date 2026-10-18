@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Database, Image, Layers, ShieldAlert, Trash2, Terminal, AlertTriangle, RotateCcw } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Database, Image, Layers, ShieldAlert, Trash2, Terminal, AlertTriangle, RotateCcw, CheckCircle2, XCircle, RefreshCw, KeyRound, ExternalLink } from "lucide-react";
 import { Button } from "@/components/common/Button";
 import { Card, CardBody, CardHeader, PageHeader } from "@/components/common/Card";
 import { Badge } from "@/components/common/Badge";
@@ -27,6 +27,55 @@ export function SettingsPage() {
   const confirmAction = useConfirm();
   const [tab, setTab] = useState("branding");
   const [showSql, setShowSql] = useState(false);
+  const [tidbStatus, setTidbStatus] = useState(null);
+  const [checkingTidb, setCheckingTidb] = useState(false);
+  const [updatingTidb, setUpdatingTidb] = useState(false);
+  const [tidbForm, setTidbForm] = useState({
+    user: "2CMVuLuG9k63iXm.root",
+    password: "",
+  });
+
+  const checkTidbStatus = async () => {
+    setCheckingTidb(true);
+    try {
+      const res = await fetch("/api/tidb/status");
+      const data = await res.json();
+      setTidbStatus(data);
+    } catch (err) {
+      setTidbStatus({ success: false, message: "Server backend sedang memproses. Coba lagi dalam beberapa detik." });
+    } finally {
+      setCheckingTidb(false);
+    }
+  };
+
+  useEffect(() => {
+    if (tab === "security") {
+      checkTidbStatus();
+    }
+  }, [tab]);
+
+  const handleUpdateTidb = async (e) => {
+    e.preventDefault();
+    setUpdatingTidb(true);
+    try {
+      const res = await fetch("/api/tidb/configure", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(tidbForm),
+      });
+      const data = await res.json();
+      setTidbStatus(data);
+      if (data.success) {
+        toast.success("Kredensial berhasil diperbarui dan TiDB terhubung!");
+      } else {
+        toast.error("Gagal terhubung: " + data.message);
+      }
+    } catch (err) {
+      toast.error("Gagal mengirim kredensial ke server");
+    } finally {
+      setUpdatingTidb(false);
+    }
+  };
 
   const allowed = can("pengaturan", "read") || isAdmin;
   const canUpdate = can("pengaturan", "update") || isAdmin;
@@ -205,46 +254,120 @@ export function SettingsPage() {
                 icon={Database}
               />
               <CardBody className="space-y-4">
-                <div className="rounded-lg border border-emerald-100 bg-emerald-50/70 p-4">
-                  <div className="flex items-center gap-2">
-                    <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse" />
-                    <p className="text-xs font-bold text-emerald-800">TiDB MySQL Terhubung & Aktif</p>
+                {/* Status Box */}
+                {checkingTidb ? (
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 flex items-center gap-2">
+                    <RefreshCw className="h-4 w-4 animate-spin text-brand-600" />
+                    <span className="text-xs font-semibold text-slate-700">Memeriksa koneksi ke gateway TiDB Cloud...</span>
                   </div>
-                  <p className="mt-1.5 text-xs text-emerald-700 leading-relaxed">
-                    Sistem menggunakan database relasional <strong>TiDB MySQL</strong>. Seluruh data registrasi, tiket perbaikan, dan akun staf tersimpan secara aman dan terpusat.
-                  </p>
+                ) : tidbStatus?.success ? (
+                  <div className="rounded-lg border border-emerald-200 bg-emerald-50/80 p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                        <p className="text-xs font-bold text-emerald-800">TiDB MySQL Terhubung & Aktif Realtime</p>
+                      </div>
+                      <Badge tone="success" dot>Online</Badge>
+                    </div>
+                    <p className="mt-1.5 text-xs text-emerald-700 leading-relaxed">
+                      Koneksi ke TiDB Cloud Serverless aktif ({tidbStatus.message}). Data registrasi dan perbaikan langsung tersinkronisasi ke database cloud.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="rounded-lg border border-amber-300 bg-amber-50/90 p-4 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <AlertTriangle className="h-4 w-4 text-amber-600" />
+                        <p className="text-xs font-bold text-amber-900">Perlu Verifikasi Kredensial TiDB</p>
+                      </div>
+                      <Badge tone="warning">Koneksi Ditolak</Badge>
+                    </div>
+                    <p className="text-xs text-amber-800 leading-relaxed">
+                      {tidbStatus?.message || "TiDB Cloud merespons gateway, namun menolak kredensial akun."}
+                    </p>
+                    <p className="text-[11.5px] text-amber-700">
+                      Hal ini terjadi jika password cluster di TiDB Cloud di-reset atau berbeda dengan yang tersimpan. Anda dapat memperbarui password secara langsung di formulir bawah ini.
+                    </p>
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between gap-2 pt-1">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    loading={checkingTidb}
+                    icon={RefreshCw}
+                    onClick={checkTidbStatus}
+                  >
+                    Uji Ulang Koneksi TiDB
+                  </Button>
+                  <a
+                    href="https://tidbcloud.com"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 text-[11.5px] font-semibold text-brand-600 hover:underline"
+                  >
+                    Buka TiDB Cloud Console <ExternalLink size={12} />
+                  </a>
                 </div>
+
+                {/* Form Update Kredensial TiDB Langsung */}
+                <form onSubmit={handleUpdateTidb} className="rounded-xl border border-slate-200 bg-white p-4 space-y-3">
+                  <p className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                    <KeyRound size={14} className="text-brand-600" /> Perbarui Username / Password TiDB
+                  </p>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div>
+                      <label className="text-[11px] font-semibold text-slate-600 block mb-1">Username (Cluster Prefix.root)</label>
+                      <input
+                        type="text"
+                        value={tidbForm.user}
+                        onChange={(e) => setTidbForm({ ...tidbForm, user: e.target.value })}
+                        className="w-full rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-mono text-slate-800 focus:outline-none focus:border-brand-500"
+                        placeholder="2CMVuLuG9k63iXm.root"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] font-semibold text-slate-600 block mb-1">Password Baru TiDB</label>
+                      <input
+                        type="password"
+                        value={tidbForm.password}
+                        onChange={(e) => setTidbForm({ ...tidbForm, password: e.target.value })}
+                        className="w-full rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-mono text-slate-800 focus:outline-none focus:border-brand-500"
+                        placeholder="Masukkan password cluster..."
+                        required
+                      />
+                    </div>
+                  </div>
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    size="sm"
+                    loading={updatingTidb}
+                    className="w-full"
+                  >
+                    Simpan & Uji Sambungkan TiDB
+                  </Button>
+                </form>
 
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-3">
-                  <p className="text-xs font-bold text-slate-800">Langkah Mudah Menghubungkan TiDB MySQL:</p>
+                  <p className="text-xs font-bold text-slate-800">Langkah Mudah Mengatasi "Access Denied" di TiDB Cloud:</p>
                   <ol className="space-y-2 text-xs text-slate-600 list-decimal pl-4">
                     <li>
-                      <strong>Buat Cluster TiDB Cloud:</strong> Masuk ke <a href="https://tidbcloud.com" target="_blank" rel="noreferrer" className="text-brand-600 underline font-semibold">tidbcloud.com</a> dan buat cluster Serverless baru (gratis).
+                      Buka console <strong>TiDB Cloud</strong> di browser Anda (<a href="https://tidbcloud.com" target="_blank" rel="noreferrer" className="text-brand-600 underline font-semibold">tidbcloud.com</a>).
                     </li>
                     <li>
-                      <strong>Salin Skema DDL:</strong> Buka tab <em>Skema Database TiDB MySQL</em> di menu samping, lalu klik <strong>Salin Skema SQL</strong>.
+                      Klik nama cluster Anda &rarr; klik tombol <strong>Connect</strong> di kanan atas.
                     </li>
                     <li>
-                      <strong>Eksekusi di SQL Editor:</strong> Buka menu SQL Editor di TiDB Cloud, tempel skrip tersebut, dan klik <strong>Run</strong> untuk membuat tabel secara otomatis.
+                      Klik <strong>Reset Password</strong> &rarr; salin password yang baru dibuat.
                     </li>
                     <li>
-                      <strong>Pasang Secret / .env:</strong> Masukkan kredensial host, port (4000), username, dan password ke dalam file `.env` aplikasi atau secret manager Anda.
+                      Tempel password tersebut ke formulir <em>Perbarui Username / Password TiDB</em> di atas lalu klik <strong>Simpan & Uji Sambungkan TiDB</strong>.
                     </li>
                   </ol>
-                </div>
-
-                <div className="rounded-lg border border-slate-200 bg-ink-900 p-3.5">
-                  <p className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
-                    <Terminal className="h-3.5 w-3.5" aria-hidden /> Konfigurasi Aktif TiDB MySQL (.env)
-                  </p>
-                  <pre className="overflow-x-auto font-mono text-[12px] leading-relaxed text-slate-200">
-{`TIDB_HOST=gateway01.ap-southeast-1.prod.aws.tidbcloud.com
-TIDB_PORT=4000
-TIDB_USER=2CMVuLuG9k63iXm.root
-TIDB_PASSWORD=OFBMKXukDxXav86B
-TIDB_DATABASE=sys
-TIDB_ENABLE_SSL=true`}
-                  </pre>
                 </div>
               </CardBody>
             </Card>

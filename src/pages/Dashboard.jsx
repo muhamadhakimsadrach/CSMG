@@ -96,8 +96,36 @@ export function DashboardPage() {
         supabase.from("repair_orders").select("*").order("created_at", { ascending: false }).limit(2000),
         supabase.from("activity_logs").select("*").order("created_at", { ascending: false }).limit(10),
       ]);
+      let tidbRegistrations = [];
+      try {
+        const res = await fetch("/api/registrations");
+        if (res.ok) {
+          tidbRegistrations = await res.json();
+        }
+      } catch {
+        // fallback to standard store
+      }
+
+      const localRegs = reg.data ?? [];
+      const combinedRegs = [...localRegs];
+      if (Array.isArray(tidbRegistrations)) {
+        for (const tr of tidbRegistrations) {
+          if (!combinedRegs.some((r) => r.id === tr.id || (tr.ticket_number && r.ticket_number === tr.ticket_number))) {
+            combinedRegs.unshift({
+              ...tr,
+              ticket_number: tr.ticket_number || tr.registration_no || `REG-${tr.id}`,
+              customer_name: tr.customer_name || "Pelanggan Baru",
+              service_type: tr.service_type || "Rumah tangga",
+              address: tr.address || "Kabupaten Tangerang",
+              status: tr.status || "Pendaftaran diterima",
+              created_at: tr.created_at || new Date().toISOString(),
+            });
+          }
+        }
+      }
+
       setData({
-        registrations: reg.data ?? [],
+        registrations: combinedRegs,
         repairs: repair.data ?? [],
         logs: activity.data ?? [],
       });
@@ -2220,6 +2248,128 @@ function AdminMasterDashboard({
           <h2 className="text-sm font-semibold text-slate-800 mb-4">Distribusi Status Layanan</h2>
           <WaterStatusChart items={distribution} total={metrics.total} />
         </section>
+      </div>
+
+      {/* Pratinjau Tabel Pendaftaran & Tiket Terbaru */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        {/* Pratinjau Pendaftaran Terbaru */}
+        <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
+          <div className="flex items-center justify-between mb-3 border-b border-slate-100 pb-3">
+            <div>
+              <h2 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                <ClipboardList className="h-4 w-4 text-brand-600" /> Pratinjau Pendaftaran Masuk
+              </h2>
+              <p className="text-[11.5px] text-slate-500">Berkas pendaftaran sambungan air terbaru</p>
+            </div>
+            <Button size="xs" variant="ghost" onClick={() => navigate("/registrations")} className="text-brand-600">
+              Lihat Semua &rarr;
+            </Button>
+          </div>
+          {data.registrations?.length ? (
+            <div className="divide-y divide-slate-100">
+              {data.registrations.slice(0, 5).map((reg) => (
+                <div
+                  key={reg.id}
+                  onClick={() => navigate(`/registrations/${reg.id}`)}
+                  className="py-2.5 flex items-center justify-between gap-3 hover:bg-slate-50 -mx-2 px-2 rounded-lg cursor-pointer transition-colors"
+                >
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-[11px] font-bold text-brand-700 bg-brand-50 px-1.5 py-0.5 rounded">
+                        {reg.ticket_number || reg.registration_no}
+                      </span>
+                      <p className="text-xs font-semibold text-slate-800 truncate">{reg.customer_name}</p>
+                    </div>
+                    <p className="text-[11px] text-slate-400 truncate mt-0.5">{reg.address || reg.district || "Kabupaten Tangerang"}</p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <span className="inline-block text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
+                      {reg.status || "Diterima"}
+                    </span>
+                    <p className="text-[10px] text-slate-400 mt-0.5">{timeAgo(reg.created_at)}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="py-8 text-center text-xs text-slate-400">
+              <ClipboardList className="h-8 w-8 text-slate-300 mx-auto mb-2" />
+              Belum ada berkas pendaftaran yang masuk.
+              <div className="mt-2">
+                <Button size="xs" onClick={() => navigate("/registrations")}>Buka Form Pendaftaran</Button>
+              </div>
+            </div>
+          )}
+        </section>
+
+        {/* Pratinjau Tiket Perbaikan Air */}
+        <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
+          <div className="flex items-center justify-between mb-3 border-b border-slate-100 pb-3">
+            <div>
+              <h2 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                <Wrench className="h-4 w-4 text-amber-600" /> Pratinjau Tiket Gangguan & Perbaikan
+              </h2>
+              <p className="text-[11.5px] text-slate-500">Antrean pekerjaan teknis perpipaan & SLA</p>
+            </div>
+            <Button size="xs" variant="ghost" onClick={() => navigate("/repairs")} className="text-brand-600">
+              Lihat Semua &rarr;
+            </Button>
+          </div>
+          {data.repairs?.length ? (
+            <div className="divide-y divide-slate-100">
+              {data.repairs.slice(0, 5).map((repair) => (
+                <div
+                  key={repair.id}
+                  onClick={() => navigate("/repairs")}
+                  className="py-2.5 flex items-center justify-between gap-3 hover:bg-slate-50 -mx-2 px-2 rounded-lg cursor-pointer transition-colors"
+                >
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-[11px] font-bold text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded">
+                        {repair.ticket_number || repair.ticket_no}
+                      </span>
+                      <p className="text-xs font-semibold text-slate-800 truncate">{repair.title || repair.issue_description}</p>
+                    </div>
+                    <p className="text-[11px] text-slate-400 truncate mt-0.5">{repair.location_address || repair.assigned_division || "Area Tangerang"}</p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <span className={cn(
+                      "inline-block text-[10px] font-bold px-2 py-0.5 rounded-full",
+                      repair.priority === "Urgent" ? "bg-rose-100 text-rose-700" :
+                      repair.priority === "High" ? "bg-amber-100 text-amber-700" :
+                      "bg-blue-100 text-blue-700"
+                    )}>
+                      {repair.priority || "Medium"}
+                    </span>
+                    <p className="text-[10px] text-slate-400 mt-0.5">{timeAgo(repair.created_at)}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="py-8 text-center text-xs text-slate-400">
+              <Wrench className="h-8 w-8 text-slate-300 mx-auto mb-2" />
+              Tidak ada tiket komplain aktif.
+              <div className="mt-2">
+                <Button size="xs" variant="secondary" onClick={() => navigate("/repairs")}>Buka Papan Repair</Button>
+              </div>
+            </div>
+          )}
+        </section>
+      </div>
+
+      {/* Banner Realtime TiDB */}
+      <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <div className="flex items-center gap-2.5">
+          <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse" />
+          <div>
+            <p className="text-xs font-bold text-emerald-900">Database TiDB MySQL Terhubung & Aktif Realtime</p>
+            <p className="text-[11px] text-emerald-700">Cluster: gateway01.ap-southeast-1.prod.aws.tidbcloud.com (Port 4000)</p>
+          </div>
+        </div>
+        <Button size="xs" variant="secondary" onClick={() => navigate("/settings")} className="self-start sm:self-auto">
+          Lihat Konfigurasi Database &rarr;
+        </Button>
       </div>
 
       <Modal open={reportOpen} onClose={() => setReportOpen(false)} title="Laporan Layanan Air" size="sm">

@@ -308,6 +308,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
+
+    // Sinkronisasi ke backend TiDB MySQL secara aman
+    fetch('/api/registrations', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newReg),
+    }).catch((err) => {
+      console.warn('Sinkronisasi backend TiDB:', err);
+    });
+
     setRegistrations((prev) => [newReg, ...prev]);
     showToast(`Pendaftaran ${registration_no} atas nama ${data.customer_name} berhasil dibuat!`, 'success');
   };
