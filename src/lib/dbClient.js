@@ -252,25 +252,28 @@ class FirestoreQuery {
         return { data: deleted, error: null };
       }
 
-      // SELECT
-      let qRef = this.buildQuery(colRef);
-      // Apply sorting if simple
-      if (this.orders.length > 0) {
-        const o = this.orders[0];
-        try {
-          qRef = query(qRef, orderBy(o.col, o.asc ? "asc" : "desc"));
-        } catch (e) {
-          console.warn("[Firebase] Order warning:", e);
+      // SELECT with robust fallback
+      let snapshot;
+      try {
+        let qRef = this.buildQuery(colRef);
+        if (this.orders.length > 0) {
+          const o = this.orders[0];
+          try {
+            qRef = query(qRef, orderBy(o.col, o.asc ? "asc" : "desc"));
+          } catch (e) {}
         }
-      }
-      if (this._limit != null) {
-        qRef = query(qRef, limit(this._limit));
+        if (this._limit != null) {
+          qRef = query(qRef, limit(this._limit));
+        }
+        snapshot = await getDocs(qRef);
+      } catch (queryErr) {
+        console.warn("[Firebase] Query fallback to all docs:", queryErr);
+        snapshot = await getDocs(colRef);
       }
 
-      const snapshot = await getDocs(qRef);
       let rows = snapshot.docs.map(d => ({ ...d.data(), id: d.id }));
 
-      // Fallback in-memory sort/filter if complex
+      // In-memory filter
       if (this.filters.length > 0) {
         rows = rows.filter(row => {
           return this.filters.every(f => {
@@ -285,6 +288,26 @@ class FirestoreQuery {
             return true;
           });
         });
+      }
+
+      // In-memory sort
+      if (this.orders.length > 0) {
+        const o = this.orders[0];
+        rows.sort((a, b) => {
+          const av = a[o.col];
+          const bv = b[o.col];
+          if (av == null && bv == null) return 0;
+          if (av == null) return 1;
+          if (bv == null) return -1;
+          let cmp = 0;
+          if (typeof av === "string") cmp = av.localeCompare(String(bv));
+          else cmp = av - bv;
+          return o.asc ? cmp : -cmp;
+        });
+      }
+
+      if (this._limit != null && rows.length > this._limit) {
+        rows = rows.slice(0, this._limit);
       }
 
       if (this._single) {
