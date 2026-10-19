@@ -1,17 +1,16 @@
 {
-  "name": "react-vite-tailwind",
+  "name": "portal-aetra-tangerang",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",
     "build": "vite build && tsc",
     "preview": "vite preview",
     "lint": "tsc --noEmit",
-    "start": "node server.js"
+    "start": "node server.ts"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.118.0",
     "chart.js": "^4.5.1",
     "clsx": "2.1.1",
     "exceljs": "^4.4.0",

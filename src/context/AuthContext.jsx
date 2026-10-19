@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { isDemoMode, parseError, db } from "@/lib/dbClient";
+import { isDemoMode, parseError, db as supabase } from "@/lib/dbClient";
 import { createLocalSupabase } from "@/lib/localBackend";
 import { nowIso } from "@/lib/utils";
 import { DEMO_ACCOUNTS } from "@/lib/seedData";

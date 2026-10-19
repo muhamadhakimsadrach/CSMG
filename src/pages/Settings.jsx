@@ -73,9 +73,7 @@ export function SettingsPage() {
     
     keysToRemove.forEach(key => localStorage.removeItem(key));
 
-    toast.success("Data transaksi berhasil dihapus. Akun dan formulir tetap tersimpan.", {
-      title: "Data Dikosongkan",
-    });
+    toast.success("Data transaksi berhasil dihapus. Akun dan formulir tetap tersimpan.");
     window.setTimeout(() => window.location.reload(), 1000);
   };
 

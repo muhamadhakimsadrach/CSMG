@@ -1,225 +1,39 @@
 @import "tailwindcss";
 
 @theme {
-  --font-display: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
-
-  --color-brand-50: #eff8fd;
-  --color-brand-100: #e0f0fa;
-  --color-brand-200: #bfe2f5;
-  --color-brand-300: #86c9ec;
-  --color-brand-400: #37a7db;
-  --color-brand-500: #118bcb;
-  --color-brand-600: #0077bd;
-  --color-brand-700: #00639e;
-  --color-brand-800: #1e293b;
-  --color-brand-900: #0f172a;
-
-  --color-ink-50: #f8fafc;
-  --color-ink-100: #f1f5f9;
-  --color-ink-200: #e2e8f0;
-  --color-ink-300: #cbd5e1;
-  --color-ink-400: #94a3b8;
-  --color-ink-500: #64748b;
-  --color-ink-600: #475569;
-  --color-ink-700: #334155;
-  --color-ink-800: #1e293b;
-  --color-ink-900: #0f172a;
-
-  --animate-fade-up: fade-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
-  --animate-fade-in: fade-in 0.35s ease-out both;
-  --animate-slide-in: slide-in 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
-  --animate-slide-up: slide-up 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
-  --animate-pulse-ring: pulse-ring 2.4s ease-out infinite;
-  --animate-shimmer: shimmer 1.6s linear infinite;
+  --color-brand-50: #eff8ff;
+  --color-brand-100: #dbeafe;
+  --color-brand-200: #bfdbfe;
+  --color-brand-500: #0077bd;
+  --color-brand-600: #0066a3;
+  --color-brand-700: #005589;
+  --color-brand-800: #00446e;
+  --color-brand-900: #003354;
+  --font-display: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
 }
 
-@keyframes fade-up {
-  from {
-    opacity: 0;
-    transform: translate3d(0, 14px, 0);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-@keyframes fade-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-@keyframes slide-in {
-  from {
-    opacity: 0;
-    transform: translate3d(18px, 0, 0);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-@keyframes slide-up {
-  from {
-    opacity: 0;
-    transform: translate3d(0, 26px, 0);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-@keyframes pulse-ring {
-  0% {
-    box-shadow: 0 0 0 0 rgba(0, 119, 189, 0.45);
-  }
-  70% {
-    box-shadow: 0 0 0 10px transparent;
-  }
-  100% {
-    box-shadow: 0 0 0 0 transparent;
-  }
-}
-@keyframes shimmer {
-  0% {
-    background-position: -420px 0;
-  }
-  100% {
-    background-position: 420px 0;
-  }
-}
-
-:root {
-  color-scheme: light;
-}
-
-html {
-  -webkit-text-size-adjust: 100%;
-}
-
-body {
-  margin: 0;
-  background-color: #f7f9fc;
-  color: #1b2c44;
-  font-family: var(--font-sans);
-  font-feature-settings: "cv02", "cv03";
-  -webkit-font-smoothing: antialiased;
-  text-rendering: optimizeLegibility;
-}
-
-* {
-  -webkit-tap-highlight-color: transparent;
-}
-
-button, a, select { touch-action: manipulation; }
-button:not(:disabled), a, select { cursor: pointer; }
-button:disabled { cursor: not-allowed; }
-button:focus-visible, a:focus-visible { outline: 2px solid var(--color-brand-600); outline-offset: 3px; }
-input, textarea, select { scroll-margin-block: 90px; }
-.aetra-panel { border: 1px solid #e7ecf2; border-radius: 12px; background: white; }
-.water-banner { position: relative; overflow: hidden; isolation: isolate; background: #073b66; }
-.water-banner::before { content: ""; position: absolute; inset: 0; z-index: -2; background: url('/images/water-ripples.jpg') 62% 55% / cover; animation: water-presence 16s ease-in-out infinite alternate; }
-.water-banner::after { content: ""; position: absolute; inset: 0; z-index: -1; background: linear-gradient(100deg, #07345bee 0%, #064473e8 35%, #07588970 70%, #0d91b51a 100%); }
-@keyframes water-presence { from { transform: scale(1); } to { transform: scale(1.055) translateX(-0.5%); } }
-.dashboard-table td { padding: 15px 20px; }
-.dashboard-table th { padding: 12px 20px; }
-
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
-  .reveal { opacity: 1; transform: none; }
-}
-
-::selection {
-  background: color-mix(in srgb, var(--color-brand-600) 22%, transparent);
-}
-
-@layer utilities {
-  .app-grid-bg {
-    background-image:
-      linear-gradient(to right, rgba(148, 163, 184, 0.16) 1px, transparent 1px),
-      linear-gradient(to bottom, rgba(148, 163, 184, 0.16) 1px, transparent 1px);
-    background-size: 56px 56px;
-  }
-  .surface-glow {
-    background:
-      radial-gradient(680px 320px at 8% -8%, rgba(79, 70, 229, 0.1), transparent 60%),
-      radial-gradient(520px 300px at 96% 4%, rgba(13, 148, 136, 0.08), transparent 62%);
-  }
-  .skeleton {
-    background: linear-gradient(90deg, #eef2f7 25%, #e2e8f0 37%, #eef2f7 63%);
-    background-size: 420px 100%;
-    animation: var(--animate-shimmer);
-  }
-  .no-scrollbar::-webkit-scrollbar {
-    height: 6px;
-    width: 6px;
-  }
-  .no-scrollbar::-webkit-scrollbar-thumb {
-    background: rgba(148, 163, 184, 0.45);
-    border-radius: 9999px;
-  }
-  .no-scrollbar::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  .focus-ring {
-    outline: 2px solid color-mix(in srgb, var(--color-brand-600) 65%, transparent);
-    outline-offset: 2px;
-  }
-}
-
-input,
-select,
-textarea,
-button {
-  font-family: inherit;
-}
-
-input[type="color"] {
-  padding: 0;
-  border: none;
-  background: transparent;
-}
-input[type="color"]::-webkit-color-swatch-wrapper {
-  padding: 0;
-}
-input[type="color"]::-webkit-color-swatch {
-  border: 1px solid rgba(148, 163, 184, 0.5);
-  border-radius: 8px;
-}
-
-.reveal {
-  opacity: 0;
-  transform: translate3d(0, 16px, 0);
-  transition:
-    opacity 0.55s cubic-bezier(0.22, 1, 0.36, 1),
-    transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
-}
-.reveal.is-visible {
-  opacity: 1;
-  transform: none;
-}
-
-@media print {
-  .print-hide {
-    display: none !important;
-  }
-  .print-area {
-    position: absolute;
-    inset: 0;
-    margin: 0;
-    padding: 0;
-    width: 100%;
-    background: #ffffff;
-  }
+@layer base {
   body {
-    background: #ffffff;
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    color: #1e293b;
+    background-color: #f8fafc;
   }
-  @page {
-    size: A4;
-    margin: 16mm;
-  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.2s ease-out forwards;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.25s ease-out forwards;
 }

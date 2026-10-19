@@ -1,166 +1,313 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import {
   AppSettings,
+  ModuleKey,
+  ModulePermission,
+  Registration,
+  RepairOrder,
   Role,
   UserProfile,
   WorkflowStage,
-  Registration,
-  RepairOrder,
-  ModuleKey,
-  ModulePermission,
-  RepairLog,
 } from '../types';
-import {
-  INITIAL_SETTINGS,
-  INITIAL_ROLES,
-  INITIAL_USERS,
-  INITIAL_REGISTRATION_STAGES,
-  INITIAL_REPAIR_STAGES,
-  INITIAL_REGISTRATIONS,
-  INITIAL_REPAIR_ORDERS,
-} from '../lib/mockData';
+import { useToastBase } from './ToastContext';
+import { db } from '../lib/dbClient';
 
-interface ToastState {
-  message: string;
-  type: 'success' | 'error' | 'info';
-}
+const INITIAL_ROLES: Role[] = [
+  {
+    id: 'role_admin',
+    name: 'Admin Aetra',
+    division: 'Manajemen Pusat & Pengaturan',
+    description: 'Akses penuh ke semua modul sistem, branding perusahaan, manajemen hak akses pengguna, dan konfigurasi alur kerja.',
+    is_admin: true,
+    permissions: {
+      dashboard: { view: true, create: true, edit: true, delete: true, export: true },
+      pendaftaran: { view: true, create: true, edit: true, delete: true, export: true },
+      repair: { view: true, create: true, edit: true, delete: true, export: true },
+      forms: { view: true, create: true, edit: true, delete: true, export: true },
+      pengguna: { view: true, create: true, edit: true, delete: true, export: true },
+      workflow: { view: true, create: true, edit: true, delete: true, export: true },
+      pengaturan: { view: true, create: true, edit: true, delete: true, export: true },
+      log_aktivitas: { view: true, create: true, edit: true, delete: true, export: true },
+    },
+  },
+  {
+    id: 'role_cs',
+    name: 'Customer Service (CS)',
+    division: 'Pintu Masuk Pendaftaran & Complain',
+    description: 'Menerima pendaftaran sambungan baru & pengaduan pelanggan, verifikasi kelengkapan berkas, serta penerbitan ID pelanggan.',
+    permissions: {
+      dashboard: { view: true, create: false, edit: false, delete: false, export: true },
+      pendaftaran: { view: true, create: true, edit: true, delete: false, export: true },
+      repair: { view: true, create: true, edit: true, delete: false, export: true },
+      forms: { view: true, create: false, edit: false, delete: false, export: false },
+      pengguna: { view: false, create: false, edit: false, delete: false, export: false },
+      workflow: { view: true, create: false, edit: false, delete: false, export: false },
+      pengaturan: { view: false, create: false, edit: false, delete: false, export: false },
+      log_aktivitas: { view: true, create: false, edit: false, delete: false, export: false },
+    },
+  },
+  {
+    id: 'role_spv_sales',
+    name: 'SPV Sales',
+    division: 'Supervisor Divisi Sales',
+    description: 'Menerima delegasi tugas pendaftaran dari CS dan menugaskan survei kelayakan jaringan ke tim Sales lapangan.',
+    permissions: {
+      dashboard: { view: true, create: false, edit: false, delete: false, export: true },
+      pendaftaran: { view: true, create: false, edit: true, delete: false, export: true },
+      repair: { view: false, create: false, edit: false, delete: false, export: false },
+      forms: { view: false, create: false, edit: false, delete: false, export: false },
+      pengguna: { view: true, create: false, edit: false, delete: false, export: false },
+      workflow: { view: true, create: false, edit: false, delete: false, export: false },
+      pengaturan: { view: false, create: false, edit: false, delete: false, export: false },
+      log_aktivitas: { view: true, create: false, edit: false, delete: false, export: false },
+    },
+  },
+  {
+    id: 'role_spv_tech',
+    name: 'SPV Technical',
+    division: 'Supervisor Divisi Teknik',
+    description: 'Menerima laporan gangguan air dari CS dan mendelegasikan penanganan ke tim New Connection atau Minor Repair.',
+    permissions: {
+      dashboard: { view: true, create: false, edit: false, delete: false, export: true },
+      pendaftaran: { view: false, create: false, edit: false, delete: false, export: false },
+      repair: { view: true, create: false, edit: true, delete: false, export: true },
+      forms: { view: false, create: false, edit: false, delete: false, export: false },
+      pengguna: { view: true, create: false, edit: false, delete: false, export: false },
+      workflow: { view: true, create: false, edit: false, delete: false, export: false },
+      pengaturan: { view: false, create: false, edit: false, delete: false, export: false },
+      log_aktivitas: { view: true, create: false, edit: false, delete: false, export: false },
+    },
+  },
+  {
+    id: 'role_sales',
+    name: 'Sales (Petugas Lapangan)',
+    division: 'Petugas Survey & Pendaftaran',
+    description: 'Melaksanakan survei pipa dan pengukuran jaringan sambungan baru di lokasi pemohon.',
+    permissions: {
+      dashboard: { view: true, create: false, edit: false, delete: false, export: false },
+      pendaftaran: { view: true, create: false, edit: true, delete: false, export: false },
+      repair: { view: false, create: false, edit: false, delete: false, export: false },
+      forms: { view: false, create: false, edit: false, delete: false, export: false },
+      pengguna: { view: false, create: false, edit: false, delete: false, export: false },
+      workflow: { view: false, create: false, edit: false, delete: false, export: false },
+      pengaturan: { view: false, create: false, edit: false, delete: false, export: false },
+      log_aktivitas: { view: false, create: false, edit: false, delete: false, export: false },
+    },
+  },
+  {
+    id: 'role_nc',
+    name: 'NC (New Connection)',
+    division: 'Tim Instalasi Sambungan Baru',
+    description: 'Pemasangan pipa dinas dan pemasangan meter air baru setelah pembayaran tervalidasi.',
+    permissions: {
+      dashboard: { view: true, create: false, edit: false, delete: false, export: false },
+      pendaftaran: { view: true, create: false, edit: true, delete: false, export: false },
+      repair: { view: false, create: false, edit: false, delete: false, export: false },
+      forms: { view: false, create: false, edit: false, delete: false, export: false },
+      pengguna: { view: false, create: false, edit: false, delete: false, export: false },
+      workflow: { view: false, create: false, edit: false, delete: false, export: false },
+      pengaturan: { view: false, create: false, edit: false, delete: false, export: false },
+      log_aktivitas: { view: false, create: false, edit: false, delete: false, export: false },
+    },
+  },
+  {
+    id: 'role_repair',
+    name: 'Minor Repair (Teknisi)',
+    division: 'Tim Perbaikan & Material',
+    description: 'Eksekusi perbaikan pipa bocor, meter air rusak, dan pelaporan material yang digunakan.',
+    permissions: {
+      dashboard: { view: true, create: false, edit: false, delete: false, export: false },
+      pendaftaran: { view: false, create: false, edit: false, delete: false, export: false },
+      repair: { view: true, create: false, edit: true, delete: false, export: false },
+      forms: { view: false, create: false, edit: false, delete: false, export: false },
+      pengguna: { view: false, create: false, edit: false, delete: false, export: false },
+      workflow: { view: false, create: false, edit: false, delete: false, export: false },
+      pengaturan: { view: false, create: false, edit: false, delete: false, export: false },
+      log_aktivitas: { view: false, create: false, edit: false, delete: false, export: false },
+    },
+  },
+];
+
+const INITIAL_USERS: UserProfile[] = [
+  {
+    id: 'usr_admin_01',
+    name: 'Rani Prameswari (Admin)',
+    email: 'admin@aetra.demo',
+    role_id: 'role_admin',
+    role_name: 'Admin Aetra',
+    division: 'Manajemen Pusat & Pengaturan',
+    phone_number: '0812-0000-1001',
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: 'usr_cs_01',
+    name: 'Intan Permatasari (CS)',
+    email: 'cs@aetra.demo',
+    role_id: 'role_cs',
+    role_name: 'Customer Service (CS)',
+    division: 'Pintu Masuk Pendaftaran & Complain',
+    phone_number: '0812-0000-1002',
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: 'usr_spv_sales_01',
+    name: 'Bagas Adhi Nugroho (SPV Sales)',
+    email: 'spv.sales@aetra.demo',
+    role_id: 'role_spv_sales',
+    role_name: 'SPV Sales',
+    division: 'Supervisor Divisi Sales',
+    phone_number: '0812-0000-1003',
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: 'usr_spv_tech_01',
+    name: 'Fikri Maulana (SPV Technical)',
+    email: 'spv.technical@aetra.demo',
+    role_id: 'role_spv_tech',
+    role_name: 'SPV Technical',
+    division: 'Supervisor Divisi Teknik',
+    phone_number: '0812-0000-1004',
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: 'usr_sales_01',
+    name: 'Sarah Wijaya (Sales)',
+    email: 'sales@aetra.demo',
+    role_id: 'role_sales',
+    role_name: 'Sales (Petugas Lapangan)',
+    division: 'Petugas Survey & Pendaftaran',
+    phone_number: '0812-0000-1005',
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: 'usr_nc_01',
+    name: 'Joko Susilo (NC)',
+    email: 'nc@aetra.demo',
+    role_id: 'role_nc',
+    role_name: 'NC (New Connection)',
+    division: 'Tim Instalasi Sambungan Baru',
+    phone_number: '0812-0000-1006',
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: 'usr_repair_01',
+    name: 'Dedi Kurniawan (Teknisi)',
+    email: 'repair@aetra.demo',
+    role_id: 'role_repair',
+    role_name: 'Minor Repair (Teknisi)',
+    division: 'Tim Perbaikan & Material',
+    phone_number: '0812-0000-1007',
+    created_at: new Date().toISOString(),
+  },
+];
+
+const INITIAL_SETTINGS: AppSettings = {
+  id: 'set_01',
+  app_name: 'Aetra Tangerang',
+  company_name: 'PT Aetra Air Tangerang',
+  tagline: 'Portal Layanan Terpadu Air Minum',
+  logo_url: '',
+  favicon_url: '',
+  accent_color: '#0077BD',
+  login_title: 'Portal Layanan Terpadu',
+  login_subtitle: 'Akses staf internal, pendaftaran mandiri sambungan baru, dan pelacakan keluhan pelanggan.',
+  login_badge: 'Layanan Air Terpadu PT Aetra',
+  login_hero_image: '',
+  support_email: 'layanan@aetratangerang.co.id',
+  support_phone: '021 598 5474',
+  updated_at: new Date().toISOString(),
+};
 
 interface AppContextType {
-  // Current user & RBAC
-  currentUser: UserProfile;
-  currentRole: Role;
-  users: UserProfile[];
+  appSettings: AppSettings;
   roles: Role[];
+  users: UserProfile[];
+  currentUserId: string;
+  currentRole: Role;
+  currentUser: UserProfile;
+  registrations: Registration[];
+  repairOrders: RepairOrder[];
+  activeView: ModuleKey;
+  tiDBConnected: boolean;
+  tiDBLatency: number;
+  setActiveView: (view: ModuleKey) => void;
   switchUser: (userId: string) => void;
   can: (module: ModuleKey, action?: keyof ModulePermission) => boolean;
-  
-  // App Settings & Branding
-  appSettings: AppSettings;
   updateAppSettings: (updates: Partial<AppSettings>) => void;
-  
-  // RBAC Management
   updateRolePermissions: (roleId: string, module: ModuleKey, permissions: Partial<ModulePermission>) => void;
-  addUser: (newUser: Omit<UserProfile, 'id' | 'created_at'>) => void;
+  addUser: (user: Omit<UserProfile, 'id' | 'created_at'>) => void;
   updateUser: (id: string, updates: Partial<UserProfile>) => void;
   deleteUser: (id: string) => void;
-  
-  // Workflow Stages
-  registrationStages: WorkflowStage[];
-  repairStages: WorkflowStage[];
-  updateWorkflowStages: (category: 'registration' | 'repair', stages: WorkflowStage[]) => void;
-  addWorkflowStage: (category: 'registration' | 'repair', stage: Omit<WorkflowStage, 'id' | 'order'>) => void;
-  deleteWorkflowStage: (category: 'registration' | 'repair', id: string) => void;
-  
-  // Registrations
-  registrations: Registration[];
-  addRegistration: (data: Omit<Registration, 'id' | 'registration_no' | 'created_at' | 'updated_at'>) => void;
-  updateRegistrationStatus: (id: string, newStatus: string, note?: string) => void;
-  verifyDocument: (regId: string, docId: string, verified: boolean, notes?: string) => void;
-  
-  // Repair Orders
-  repairOrders: RepairOrder[];
-  addRepairOrder: (data: Omit<RepairOrder, 'id' | 'ticket_no' | 'created_at' | 'updated_at' | 'logs'>) => void;
-  dispatchRepairTicketFromRegistration: (reg: Registration, customIssue?: string, techName?: string) => void;
-  updateRepairStatus: (id: string, newStatus: string, logNote?: string) => void;
-  assignTechnician: (id: string, techName: string) => void;
-  addRepairLog: (id: string, actionSummary: string, note: string) => void;
-  updateRepairDetails: (id: string, updates: Partial<RepairOrder>) => void;
-  
-  // Navigation & UI
-  activeView: ModuleKey;
-  setActiveView: (view: ModuleKey) => void;
-  toast: ToastState | null;
-  showToast: (message: string, type?: 'success' | 'error' | 'info') => void;
+  addRegistration: (newReg: Omit<Registration, 'id' | 'created_at'>) => Promise<Registration>;
+  updateRegistration: (id: string, updates: Partial<Registration>) => Promise<void>;
+  deleteRegistration: (id: string) => Promise<void>;
+  addRepairOrder: (newOrder: Omit<RepairOrder, 'id' | 'created_at'>) => Promise<RepairOrder>;
+  updateRepairOrder: (id: string, updates: Partial<RepairOrder>) => Promise<void>;
+  deleteRepairOrder: (id: string) => Promise<void>;
+  checkTiDBStatus: () => Promise<void>;
 }
 
-const AppContext = createContext<AppContextType | undefined>(undefined);
+const AppContext = createContext<AppContextType | null>(null);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // 1. Initial State from localStorage or Defaults
-  const [appSettings, setAppSettings] = useState<AppSettings>(() => {
-    const saved = localStorage.getItem('app_settings_data');
-    return saved ? JSON.parse(saved) : INITIAL_SETTINGS;
-  });
+  const { showToast } = useToastBase();
 
-  const [roles, setRoles] = useState<Role[]>(() => {
-    const saved = localStorage.getItem('app_roles_data');
-    return saved ? JSON.parse(saved) : INITIAL_ROLES;
-  });
-
-  const [users, setUsers] = useState<UserProfile[]>(() => {
-    const saved = localStorage.getItem('app_users_data');
-    return saved ? JSON.parse(saved) : INITIAL_USERS;
-  });
-
-  const [currentUserId, setCurrentUserId] = useState<string>(() => {
-    return localStorage.getItem('app_active_user_id') || 'usr_admin_01';
-  });
-
-  const [registrationStages, setRegistrationStages] = useState<WorkflowStage[]>(() => {
-    const saved = localStorage.getItem('app_reg_stages');
-    return saved ? JSON.parse(saved) : INITIAL_REGISTRATION_STAGES;
-  });
-
-  const [repairStages, setRepairStages] = useState<WorkflowStage[]>(() => {
-    const saved = localStorage.getItem('app_rep_stages');
-    return saved ? JSON.parse(saved) : INITIAL_REPAIR_STAGES;
-  });
-
-  const [registrations, setRegistrations] = useState<Registration[]>(() => {
-    const saved = localStorage.getItem('app_registrations');
-    return saved ? JSON.parse(saved) : INITIAL_REGISTRATIONS;
-  });
-
-  const [repairOrders, setRepairOrders] = useState<RepairOrder[]>(() => {
-    const saved = localStorage.getItem('app_repair_orders');
-    return saved ? JSON.parse(saved) : INITIAL_REPAIR_ORDERS;
-  });
-
+  const [appSettings, setAppSettings] = useState<AppSettings>(INITIAL_SETTINGS);
+  const [roles, setRoles] = useState<Role[]>(INITIAL_ROLES);
+  const [users, setUsers] = useState<UserProfile[]>(INITIAL_USERS);
+  const [currentUserId, setCurrentUserId] = useState<string>('usr_admin_01');
+  const [registrations, setRegistrations] = useState<Registration[]>([]);
+  const [repairOrders, setRepairOrders] = useState<RepairOrder[]>([]);
   const [activeView, setActiveView] = useState<ModuleKey>('dashboard');
-  const [toast, setToast] = useState<ToastState | null>(null);
+  const [tiDBConnected, setTiDBConnected] = useState<boolean>(true);
+  const [tiDBLatency, setTiDBLatency] = useState<number>(108);
 
-  // Current active user object & role
-  const currentUser = users.find((u) => u.id === currentUserId) || users[0];
+  // Check TiDB Connection Status
+  const checkTiDBStatus = useCallback(async () => {
+    try {
+      const res = await fetch('/api/tidb/status');
+      const json = await res.json();
+      setTiDBConnected(Boolean(json.ok));
+      if (json.latency) setTiDBLatency(json.latency);
+    } catch {
+      setTiDBConnected(false);
+    }
+  }, []);
+
+  // Initial Sync with TiDB Cloud on mount
+  useEffect(() => {
+    checkTiDBStatus();
+    fetch('/api/tidb/sync-all')
+      .then((res) => res.json())
+      .then((res) => {
+        if (res.data) {
+          if (res.data.registrations && res.data.registrations.length > 0) {
+            setRegistrations(res.data.registrations);
+          }
+          if (res.data.repair_orders && res.data.repair_orders.length > 0) {
+            setRepairOrders(res.data.repair_orders);
+          }
+          if (res.data.app_settings && res.data.app_settings.length > 0) {
+            setAppSettings((prev) => ({ ...prev, ...res.data.app_settings[0] }));
+          }
+          if (res.data.profiles && res.data.profiles.length > 0) {
+            const mappedProfiles: UserProfile[] = res.data.profiles.map((p: any) => ({
+              ...p,
+              name: p.full_name || p.name || p.email?.split('@')[0] || 'Staf Aetra',
+              full_name: p.full_name || p.name || 'Staf Aetra',
+              division: p.department || p.division || 'Operasional',
+              role_name: p.role_name || 'Staf',
+            }));
+            setUsers(mappedProfiles);
+          }
+        }
+      })
+      .catch((err) => console.warn('[TiDB initial sync warning]:', err));
+  }, [checkTiDBStatus]);
+
+  const currentUser = users.find((u) => u.id === currentUserId) || users[0] || INITIAL_USERS[0];
   const currentRole = roles.find((r) => r.id === currentUser.role_id) || roles[0];
 
-  // Helper to show toasts
-  const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
-    setToast({ message, type });
-    setTimeout(() => {
-      setToast(null);
-    }, 3800);
-  };
-
-  // Sync state to localStorage
-  useEffect(() => {
-    localStorage.setItem('app_settings_data', JSON.stringify(appSettings));
-  }, [appSettings]);
-
-  useEffect(() => {
-    localStorage.setItem('app_roles_data', JSON.stringify(roles));
-  }, [roles]);
-
-  useEffect(() => {
-    localStorage.setItem('app_users_data', JSON.stringify(users));
-  }, [users]);
-
-  useEffect(() => {
-    localStorage.setItem('app_reg_stages', JSON.stringify(registrationStages));
-  }, [registrationStages]);
-
-  useEffect(() => {
-    localStorage.setItem('app_rep_stages', JSON.stringify(repairStages));
-  }, [repairStages]);
-
-  useEffect(() => {
-    localStorage.setItem('app_registrations', JSON.stringify(registrations));
-  }, [registrations]);
-
-  useEffect(() => {
-    localStorage.setItem('app_repair_orders', JSON.stringify(repairOrders));
-  }, [repairOrders]);
-
-  // Check RBAC permission for module & action
   const can = (module: ModuleKey, action: keyof ModulePermission = 'view'): boolean => {
     if (currentRole.is_admin) return true;
     const modPerm = currentRole.permissions[module];
@@ -168,35 +315,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return Boolean(modPerm[action]);
   };
 
-  // Switch active user
   const switchUser = (userId: string) => {
     const found = users.find((u) => u.id === userId);
     if (found) {
       setCurrentUserId(userId);
-      localStorage.setItem('app_active_user_id', userId);
       showToast(`Beralih ke profil: ${found.name} (${found.role_name})`, 'info');
-      // If the current active view is not allowed for this role, redirect to dashboard or first allowed view
-      const targetRole = roles.find((r) => r.id === found.role_id);
-      if (targetRole && !targetRole.is_admin) {
-        const allowed = targetRole.permissions[activeView]?.view;
-        if (!allowed) {
-          setActiveView('dashboard');
-        }
-      }
     }
   };
 
-  // App settings
-  const updateAppSettings = (updates: Partial<AppSettings>) => {
-    setAppSettings((prev) => ({
-      ...prev,
-      ...updates,
-      updated_at: new Date().toISOString(),
-    }));
-    showToast('Pengaturan branding perusahaan berhasil disimpan', 'success');
+  const updateAppSettings = async (updates: Partial<AppSettings>) => {
+    const next = { ...appSettings, ...updates, updated_at: new Date().toISOString() };
+    setAppSettings(next);
+    await db.from('app_settings').insert(next);
+    showToast('Pengaturan branding disimpan ke TiDB Cloud', 'success');
   };
 
-  // Update permissions for role
   const updateRolePermissions = (roleId: string, module: ModuleKey, permissions: Partial<ModulePermission>) => {
     setRoles((prev) =>
       prev.map((role) => {
@@ -206,19 +339,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           ...role,
           permissions: {
             ...role.permissions,
-            [module]: {
-              ...currentModPerm,
-              ...permissions,
-            },
+            [module]: { ...currentModPerm, ...permissions },
           },
         };
       })
     );
-    showToast('Hak akses modul role berhasil diperbarui', 'success');
+    showToast('Hak akses role berhasil diperbarui', 'success');
   };
 
-  // Add / Edit / Delete User
-  const addUser = (newUser: Omit<UserProfile, 'id' | 'created_at'>) => {
+  const addUser = async (newUser: Omit<UserProfile, 'id' | 'created_at'>) => {
     const id = `usr_${Date.now()}`;
     const userWithId: UserProfile = {
       ...newUser,
@@ -226,10 +355,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       created_at: new Date().toISOString(),
     };
     setUsers((prev) => [...prev, userWithId]);
-    showToast(`User ${newUser.name} berhasil ditambahkan`, 'success');
+    await db.from('profiles').insert(userWithId);
+    showToast(`User ${newUser.name} berhasil ditambahkan ke TiDB Cloud`, 'success');
   };
 
-  const updateUser = (id: string, updates: Partial<UserProfile>) => {
+  const updateUser = async (id: string, updates: Partial<UserProfile>) => {
     setUsers((prev) =>
       prev.map((u) => {
         if (u.id !== id) return u;
@@ -242,303 +372,109 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         };
       })
     );
-    showToast('Data pengguna berhasil diperbarui', 'success');
+    const updater = await db.from('profiles').update(updates);
+    await updater.eq('id', id);
+    showToast('Data pengguna diperbarui di TiDB Cloud', 'success');
   };
 
-  const deleteUser = (id: string) => {
+  const deleteUser = async (id: string) => {
     if (id === 'usr_admin_01') {
       showToast('Admin Pusat bawaan tidak boleh dihapus.', 'error');
       return;
     }
     setUsers((prev) => prev.filter((u) => u.id !== id));
-    if (currentUserId === id) {
-      setCurrentUserId('usr_admin_01');
-    }
-    showToast('User berhasil dihapus', 'info');
+    const deleter = await db.from('profiles').delete();
+    await deleter.eq('id', id);
+    showToast('Pengguna dihapus dari TiDB Cloud', 'info');
   };
 
-  // Workflow Stages
-  const updateWorkflowStages = (category: 'registration' | 'repair', stages: WorkflowStage[]) => {
-    const sorted = stages.map((s, index) => ({ ...s, order: index + 1 }));
-    if (category === 'registration') {
-      setRegistrationStages(sorted);
-    } else {
-      setRepairStages(sorted);
-    }
-    showToast(`Alur kerja ${category === 'registration' ? 'pendaftaran' : 'perbaikan'} berhasil diperbarui`, 'success');
-  };
-
-  const addWorkflowStage = (category: 'registration' | 'repair', stage: Omit<WorkflowStage, 'id' | 'order'>) => {
-    const id = `stg_${Date.now()}`;
-    if (category === 'registration') {
-      const order = registrationStages.length + 1;
-      setRegistrationStages((prev) => [...prev, { ...stage, id, order, category }]);
-    } else {
-      const order = repairStages.length + 1;
-      setRepairStages((prev) => [...prev, { ...stage, id, order, category }]);
-    }
-    showToast(`Tahapan alur baru berhasil ditambahkan`, 'success');
-  };
-
-  const deleteWorkflowStage = (category: 'registration' | 'repair', id: string) => {
-    if (category === 'registration') {
-      if (registrationStages.length <= 2) {
-        showToast('Minimal harus ada 2 tahapan dalam alur pendaftaran', 'error');
-        return;
-      }
-      setRegistrationStages((prev) => prev.filter((s) => s.id !== id));
-    } else {
-      if (repairStages.length <= 2) {
-        showToast('Minimal harus ada 2 tahapan dalam alur repair', 'error');
-        return;
-      }
-      setRepairStages((prev) => prev.filter((s) => s.id !== id));
-    }
-    showToast('Tahapan alur dihapus', 'info');
-  };
-
-  // Registrations
-  const addRegistration = (data: Omit<Registration, 'id' | 'registration_no' | 'created_at' | 'updated_at'>) => {
-    const seq = String(registrations.length + 1).padStart(4, '0');
-    const registration_no = `REG-2026-${seq}`;
-    const newReg: Registration = {
-      ...data,
-      id: `reg_${Date.now()}`,
-      registration_no,
+  const addRegistration = async (newReg: Omit<Registration, 'id' | 'created_at'>): Promise<Registration> => {
+    const id = `reg_${Date.now()}`;
+    const item: Registration = {
+      ...newReg,
+      id,
       created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
     };
-
-    setRegistrations((prev) => [newReg, ...prev]);
-    showToast(`Pendaftaran ${registration_no} atas nama ${data.customer_name} berhasil dibuat!`, 'success');
+    setRegistrations((prev) => [item, ...prev]);
+    await db.from('registrations').insert(item);
+    showToast(`Tiket pendaftaran ${item.ticket_number} tercatat di TiDB Cloud`, 'success');
+    return item;
   };
 
-  const updateRegistrationStatus = (id: string, newStatus: string, note?: string) => {
+  const updateRegistration = async (id: string, updates: Partial<Registration>) => {
     setRegistrations((prev) =>
-      prev.map((reg) => {
-        if (reg.id !== id) return reg;
-        return {
-          ...reg,
-          status: newStatus,
-          notes: note ? `${reg.notes ? reg.notes + '\n' : ''}[${new Date().toLocaleDateString('id-ID')}] ${note}` : reg.notes,
-          updated_at: new Date().toISOString(),
-        };
-      })
+      prev.map((reg) => (reg.id === id ? { ...reg, ...updates, updated_at: new Date().toISOString() } : reg))
     );
-    showToast(`Status pendaftaran diperbarui menjadi "${newStatus}"`, 'success');
+    const updater = await db.from('registrations').update(updates);
+    await updater.eq('id', id);
+    showToast('Status pendaftaran berhasil diperbarui di TiDB Cloud', 'success');
   };
 
-  const verifyDocument = (regId: string, docId: string, verified: boolean, notes?: string) => {
-    setRegistrations((prev) =>
-      prev.map((reg) => {
-        if (reg.id !== regId) return reg;
-        const docs = reg.documents.map((d) => {
-          if (d.id !== docId) return d;
-          return {
-            ...d,
-            verified,
-            notes: notes || d.notes,
-          };
-        });
-        return {
-          ...reg,
-          documents: docs,
-          updated_at: new Date().toISOString(),
-        };
-      })
-    );
-    showToast(verified ? 'Dokumen diverifikasi valid' : 'Verifikasi dokumen ditolak/dibatalkan', 'info');
+  const deleteRegistration = async (id: string) => {
+    setRegistrations((prev) => prev.filter((reg) => reg.id !== id));
+    const deleter = await db.from('registrations').delete();
+    await deleter.eq('id', id);
+    showToast('Data pendaftaran berhasil dihapus dari TiDB Cloud', 'info');
   };
 
-  // Repair Orders
-  const addRepairOrder = (data: Omit<RepairOrder, 'id' | 'ticket_no' | 'created_at' | 'updated_at' | 'logs'>) => {
-    const seq = String(repairOrders.length + 101).padStart(4, '0');
-    const ticket_no = `REP-2026-${seq}`;
-    const initialLog: RepairLog = {
-      id: `log_${Date.now()}`,
-      timestamp: new Date().toISOString(),
-      author_name: currentUser.name,
-      author_role: currentUser.role_name,
-      action_summary: 'Tiket Perbaikan Dibuat',
-      note: `Keluhan: ${data.issue_description}`,
-    };
-    const newOrder: RepairOrder = {
-      ...data,
-      id: `rep_${Date.now()}`,
-      ticket_no,
+  const addRepairOrder = async (newOrder: Omit<RepairOrder, 'id' | 'created_at'>): Promise<RepairOrder> => {
+    const id = `rep_${Date.now()}`;
+    const item: RepairOrder = {
+      ...newOrder,
+      id,
       created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      logs: [initialLog],
     };
-    setRepairOrders((prev) => [newOrder, ...prev]);
-    showToast(`Tiket kerja ${ticket_no} berhasil diterbitkan`, 'success');
+    setRepairOrders((prev) => [item, ...prev]);
+    await db.from('repair_orders').insert(item);
+    showToast(`Tiket perbaikan ${item.ticket_number} tersimpan di TiDB Cloud`, 'success');
+    return item;
   };
 
-  const dispatchRepairTicketFromRegistration = (
-    reg: Registration,
-    customIssue?: string,
-    techName?: string
-  ) => {
-    const seq = String(repairOrders.length + 101).padStart(4, '0');
-    const ticket_no = `REP-2026-${seq}`;
-    const initialLog: RepairLog = {
-      id: `log_${Date.now()}`,
-      timestamp: new Date().toISOString(),
-      author_name: currentUser.name,
-      author_role: currentUser.role_name,
-      action_summary: `Tiket Kerja Terintegrasi dari ${reg.registration_no}`,
-      note: `Tiket terbit otomatis dari portal pendaftaran pelanggan: ${reg.customer_name} (${reg.package_plan}). Instruksi: ${
-        customIssue || 'Pemasangan perangkat baru, terminasi kabel, & aktivasi sinyal.'
-      }`,
-    };
-    const newOrder: RepairOrder = {
-      id: `rep_${Date.now()}`,
-      ticket_no,
-      registration_no: reg.registration_no,
-      installation_address: reg.installation_address,
-      customer_name: reg.customer_name,
-      contact_phone: reg.phone,
-      unit_name: `Unit CPE / Terminal Router (${reg.package_plan})`,
-      serial_number: `CPE-${Date.now().toString().slice(-6)}`,
-      category: 'Modem / Router',
-      issue_description:
-        customIssue ||
-        `Instalasi & perakitan perangkat baru untuk layanan ${reg.service_type} (${reg.package_plan}) di alamat pelanggan: ${reg.installation_address}`,
-      priority: 'Tinggi',
-      status: 'Tiket Masuk',
-      assigned_technician: techName || 'Budi Santoso, S.T.',
-      estimated_cost: 0,
-      parts_used: ['Modem Router Gigabit Dual-Band', 'Patch Cord Serat Optik 3M', 'Kabel UTP Cat6 15M'],
-      repair_notes: `Alamat Pemasangan: ${reg.installation_address}`,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      logs: [initialLog],
-    };
-    setRepairOrders((prev) => [newOrder, ...prev]);
-    if (reg.status !== 'Instalasi Lapangan' && reg.status !== 'Layanan Aktif') {
-      updateRegistrationStatus(reg.id, 'Instalasi Lapangan', `Tiket teknisi diterbitkan: ${ticket_no}`);
-    }
-    showToast(`Tiket kerja ${ticket_no} terhubung ke pendaftaran ${reg.registration_no}!`, 'success');
-  };
-
-  const updateRepairStatus = (id: string, newStatus: string, logNote?: string) => {
+  const updateRepairOrder = async (id: string, updates: Partial<RepairOrder>) => {
     setRepairOrders((prev) =>
-      prev.map((order) => {
-        if (order.id !== id) return order;
-        const newLog: RepairLog = {
-          id: `log_${Date.now()}`,
-          timestamp: new Date().toISOString(),
-          author_name: currentUser.name,
-          author_role: currentUser.role_name,
-          action_summary: `Status diubah ke ${newStatus}`,
-          note: logNote || `Status pekerjaan diperbarui dari "${order.status}" ke "${newStatus}".`,
-          status_transition: `${order.status} → ${newStatus}`,
-        };
-        return {
-          ...order,
-          status: newStatus,
-          updated_at: new Date().toISOString(),
-          logs: [...order.logs, newLog],
-        };
-      })
+      prev.map((order) => (order.id === id ? { ...order, ...updates, updated_at: new Date().toISOString() } : order))
     );
-    showToast(`Status tiket perbaikan diperbarui menjadi "${newStatus}"`, 'success');
+    const updater = await db.from('repair_orders').update(updates);
+    await updater.eq('id', id);
+    showToast('Status perbaikan diperbarui di TiDB Cloud', 'success');
   };
 
-  const assignTechnician = (id: string, techName: string) => {
-    setRepairOrders((prev) =>
-      prev.map((order) => {
-        if (order.id !== id) return order;
-        const newLog: RepairLog = {
-          id: `log_${Date.now()}`,
-          timestamp: new Date().toISOString(),
-          author_name: currentUser.name,
-          author_role: currentUser.role_name,
-          action_summary: `Penugasan Teknisi: ${techName}`,
-          note: `Teknisi penanggung jawab ditugaskan kepada ${techName}`,
-        };
-        return {
-          ...order,
-          assigned_technician: techName,
-          updated_at: new Date().toISOString(),
-          logs: [...order.logs, newLog],
-        };
-      })
-    );
-    showToast(`Tiket ditugaskan kepada ${techName}`, 'success');
-  };
-
-  const addRepairLog = (id: string, actionSummary: string, note: string) => {
-    setRepairOrders((prev) =>
-      prev.map((order) => {
-        if (order.id !== id) return order;
-        const newLog: RepairLog = {
-          id: `log_${Date.now()}`,
-          timestamp: new Date().toISOString(),
-          author_name: currentUser.name,
-          author_role: currentUser.role_name,
-          action_summary: actionSummary,
-          note,
-        };
-        return {
-          ...order,
-          updated_at: new Date().toISOString(),
-          logs: [...order.logs, newLog],
-        };
-      })
-    );
-    showToast('Log penanganan teknisi berhasil dicatat', 'success');
-  };
-
-  const updateRepairDetails = (id: string, updates: Partial<RepairOrder>) => {
-    setRepairOrders((prev) =>
-      prev.map((order) => {
-        if (order.id !== id) return order;
-        return {
-          ...order,
-          ...updates,
-          updated_at: new Date().toISOString(),
-        };
-      })
-    );
-    showToast('Detail perbaikan berhasil diperbarui', 'success');
+  const deleteRepairOrder = async (id: string) => {
+    setRepairOrders((prev) => prev.filter((order) => order.id !== id));
+    const deleter = await db.from('repair_orders').delete();
+    await deleter.eq('id', id);
+    showToast('Tiket perbaikan dihapus dari TiDB Cloud', 'info');
   };
 
   return (
     <AppContext.Provider
       value={{
-        currentUser,
-        currentRole,
-        users,
+        appSettings,
         roles,
+        users,
+        currentUserId,
+        currentRole,
+        currentUser,
+        registrations,
+        repairOrders,
+        activeView,
+        tiDBConnected,
+        tiDBLatency,
+        setActiveView,
         switchUser,
         can,
-        appSettings,
         updateAppSettings,
         updateRolePermissions,
         addUser,
         updateUser,
         deleteUser,
-        registrationStages,
-        repairStages,
-        updateWorkflowStages,
-        addWorkflowStage,
-        deleteWorkflowStage,
-        registrations,
         addRegistration,
-        updateRegistrationStatus,
-        verifyDocument,
-        repairOrders,
+        updateRegistration,
+        deleteRegistration,
         addRepairOrder,
-        dispatchRepairTicketFromRegistration,
-        updateRepairStatus,
-        assignTechnician,
-        addRepairLog,
-        updateRepairDetails,
-        activeView,
-        setActiveView,
-        toast,
-        showToast,
+        updateRepairOrder,
+        deleteRepairOrder,
+        checkTiDBStatus,
       }}
     >
       {children}
@@ -548,8 +484,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
 export const useApp = () => {
   const context = useContext(AppContext);
-  if (!context) {
-    throw new Error('useApp must be used within an AppProvider');
-  }
+  if (!context) throw new Error('useApp must be used within AppProvider');
   return context;
 };
