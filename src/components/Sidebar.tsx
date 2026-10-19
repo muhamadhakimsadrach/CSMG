@@ -174,7 +174,7 @@ export const Sidebar: React.FC = () => {
         <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between text-[10px] text-slate-500">
           <span className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            Supabase Realtime
+            Basis Data Aktif
           </span>
           <span className="text-slate-400 font-mono">v1.2.0</span>
         </div>

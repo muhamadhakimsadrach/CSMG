@@ -1,0 +1,158 @@
+{
+  "entities": {
+    "Registration": {
+      "title": "Registration",
+      "description": "Customer service registration records",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "ticket_number": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "customer_name": { "type": "string", "minLength": 1, "maxLength": 256 },
+        "service_type": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "district": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "address": { "type": "string", "minLength": 1, "maxLength": 512 },
+        "phone": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "notes": { "type": "string", "maxLength": 2048 },
+        "status": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "created_at": { "type": "string", "format": "date-time" },
+        "updated_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "ticket_number", "customer_name", "service_type", "district", "address", "phone", "status", "created_at"]
+    },
+    "RepairOrder": {
+      "title": "RepairOrder",
+      "description": "Minor repair order tickets",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "ticket_number": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "title": { "type": "string", "minLength": 1, "maxLength": 256 },
+        "description": { "type": "string", "maxLength": 2048 },
+        "priority": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "status": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "assigned_to": { "type": "string", "maxLength": 128 },
+        "district": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "created_at": { "type": "string", "format": "date-time" },
+        "updated_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "ticket_number", "title", "priority", "status", "district", "created_at"]
+    },
+    "Profile": {
+      "title": "Profile",
+      "description": "User profile information",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "email": { "type": "string", "format": "email", "maxLength": 256 },
+        "full_name": { "type": "string", "maxLength": 256 },
+        "role_id": { "type": "string", "maxLength": 128 },
+        "department": { "type": "string", "maxLength": 128 },
+        "is_active": { "type": "boolean" },
+        "phone_number": { "type": "string", "maxLength": 64 },
+        "avatar_url": { "type": "string", "maxLength": 512 },
+        "created_at": { "type": "string", "format": "date-time" },
+        "updated_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "email", "full_name", "is_active"]
+    },
+    "Role": {
+      "title": "Role",
+      "description": "User roles",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "role_name": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "division": { "type": "string", "maxLength": 128 },
+        "is_admin": { "type": "boolean" },
+        "description": { "type": "string", "maxLength": 512 }
+      },
+      "required": ["id", "role_name", "is_admin"]
+    },
+    "Permission": {
+      "title": "Permission",
+      "description": "Module permissions per role",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "role_id": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "module_name": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "can_create": { "type": "boolean" },
+        "can_read": { "type": "boolean" },
+        "can_update": { "type": "boolean" },
+        "can_delete": { "type": "boolean" }
+      },
+      "required": ["id", "role_id", "module_name"]
+    },
+    "AppSettings": {
+      "title": "AppSettings",
+      "description": "Application settings and branding",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "company_name": { "type": "string", "maxLength": 256 },
+        "logo_url": { "type": "string", "maxLength": 512 },
+        "updated_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "company_name"]
+    },
+    "WorkflowStatus": {
+      "title": "WorkflowStatus",
+      "description": "Workflow statuses",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "name": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "color": { "type": "string", "maxLength": 64 },
+        "step_order": { "type": "number" }
+      },
+      "required": ["id", "name"]
+    },
+    "ActivityLog": {
+      "title": "ActivityLog",
+      "description": "System activity logs",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "action": { "type": "string", "minLength": 1, "maxLength": 256 },
+        "user_name": { "type": "string", "maxLength": 256 },
+        "details": { "type": "string", "maxLength": 1024 },
+        "created_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "action", "created_at"]
+    }
+  },
+  "firestore": {
+    "/registrations/{registrationId}": {
+      "schema": { "$ref": "#/entities/Registration" },
+      "description": "Customer registrations collection"
+    },
+    "/repair_orders/{orderId}": {
+      "schema": { "$ref": "#/entities/RepairOrder" },
+      "description": "Repair orders collection"
+    },
+    "/profiles/{profileId}": {
+      "schema": { "$ref": "#/entities/Profile" },
+      "description": "User profiles collection"
+    },
+    "/roles/{roleId}": {
+      "schema": { "$ref": "#/entities/Role" },
+      "description": "Roles collection"
+    },
+    "/permissions/{permissionId}": {
+      "schema": { "$ref": "#/entities/Permission" },
+      "description": "Permissions collection"
+    },
+    "/app_settings/{settingId}": {
+      "schema": { "$ref": "#/entities/AppSettings" },
+      "description": "App settings collection"
+    },
+    "/workflow_statuses/{statusId}": {
+      "schema": { "$ref": "#/entities/WorkflowStatus" },
+      "description": "Workflow statuses collection"
+    },
+    "/activity_logs/{logId}": {
+      "schema": { "$ref": "#/entities/ActivityLog" },
+      "description": "Activity logs collection"
+    }
+  }
+}

@@ -8,7 +8,8 @@ import { Reveal } from "@/components/common/Reveal";
 import { SettingsForm } from "@/components/forms/SettingsForm";
 import { useAuth } from "@/context/AuthContext";
 import { useConfirm, useToast } from "@/context/ToastContext";
-import { resetDemoData, supabase } from "@/lib/supabaseClient";
+import { resetDemoData } from "@/lib/supabaseClient";
+import { SUPABASE_SQL_SCHEMA } from "@/lib/databaseSchema";
 import { cn } from "@/utils/cn";
 
 const TABS = [
@@ -73,7 +74,9 @@ export function SettingsPage() {
     
     keysToRemove.forEach(key => localStorage.removeItem(key));
 
-    toast.success("Data transaksi berhasil dihapus. Akun dan formulir tetap tersimpan.");
+    toast.success("Data transaksi berhasil dihapus. Akun dan formulir tetap tersimpan.", {
+      title: "Data Dikosongkan",
+    });
     window.setTimeout(() => window.location.reload(), 1000);
   };
 

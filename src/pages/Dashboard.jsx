@@ -2352,17 +2352,17 @@ function AdminMasterDashboard({
         </section>
       </div>
 
-      {/* Banner Realtime Supabase */}
+      {/* Banner Basis Data Lokal */}
       <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div className="flex items-center gap-2.5">
           <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse" />
           <div>
-            <p className="text-xs font-bold text-emerald-900">Database Supabase Cloud Terhubung & Sinkronisasi Realtime Aktif</p>
-            <p className="text-[11px] text-emerald-700">Pembaruan pendaftaran, alur kerja, dan perbaikan tersinkronisasi otomatis seketika.</p>
+            <p className="text-xs font-bold text-emerald-900">Basis Data Lokal Terhubung & Operasional Siap</p>
+            <p className="text-[11px] text-emerald-700">Pembaruan pendaftaran, alur kerja, dan penanganan tersimpan otomatis di perangkat.</p>
           </div>
         </div>
         <Button size="xs" variant="secondary" onClick={() => navigate("/settings")} className="self-start sm:self-auto">
-          Lihat Konfigurasi Supabase &rarr;
+          Lihat Pengaturan Sistem &rarr;
         </Button>
       </div>
 
